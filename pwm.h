@@ -1,6 +1,8 @@
 #ifndef PWM_H
 #define PWM_H
 
-void WriteChannels( char* channelValues );
+void PwmInit( void );
+
+void UpdateChannels( unsigned char* channelValues );
 
 #endif

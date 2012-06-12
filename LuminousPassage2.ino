@@ -2,6 +2,7 @@
 //#include "util.h"
 #include "fft.h"
 #include "pwm.h"
+#include <Wire.h>
 
 #ifndef cbi
 #define cbi( sfr, bit ) ( _SFR_BYTE( sfr ) &= ~_BV( bit ) )
@@ -21,13 +22,16 @@
 
 char mFftDataReal[NUM_SAMPLES];
 char mFftDataImag[NUM_SAMPLES];
+unsigned int mFftMag[NUM_SAMPLES/2];
+unsigned char mDraw = false;
+
 
 unsigned long mAdTime;
 int mAdSample;
 
 unsigned long mPwmTime;
 
-char mChannelValues[NUM_CHANNELS];
+unsigned char mChannelValues[NUM_CHANNELS];
 
 void setup( void )
 {
@@ -50,37 +54,81 @@ void setup( void )
   mAdSample = 0;
   mAdTime = micros();
   mPwmTime = micros();
-  for( int i=0; i<NUM_SAMPLES; i++ )
+  for( int i=0; i<NUM_CHANNELS; i++ )
   {
     mChannelValues[i] = 128;
   }
-
+  
+  // Init modules
+  PwmInit();
 }
 
 void loop( void )
 {
-  unsigned long time;
+  static unsigned long totalTime = millis();
+  static unsigned long time;
+  static unsigned long timeAdCounts = 0;
+  static unsigned long timeAdDelays = 0;
+  static unsigned long timeAdPeakDelay = 0;
+  static unsigned long timeAdBlocks = 0;
+  static unsigned long timeFftCounts = 0;
+  static unsigned long timeFftBlocks = 0;
+  static unsigned long timePwmCounts = 0;
+  static unsigned long timePwmDelays = 0;
+  static unsigned long timePwmPeakDelay = 0;
+  static unsigned long timePwmBlocks = 0;
+  static unsigned long adPeak = 0;
+  static unsigned long adSum = 0;
+
+
+  unsigned long currentTime;
   
   // Check for A/D sample
-  if( ( micros() - mAdTime ) > AD_SAMPLE_TIME_US )
+  currentTime = micros();
+  if( ( currentTime - mAdTime ) > AD_SAMPLE_TIME_US )
   {
+    // Debug
+    timeAdCounts++;
+    unsigned long d = ( currentTime - mAdTime ) - AD_SAMPLE_TIME_US;
+    timeAdDelays += d;
+    if( d > timeAdPeakDelay )
+    {
+      timeAdPeakDelay = d;
+    }
+
     // Reset time for next sample
-    mAdTime = micros();
+    mAdTime = currentTime;
     
     // Sample A/D
     time = micros();
     mFftDataReal[mAdSample] = analogRead( AD_INPUT_PIN );
-    Serial.print( micros() - time );
-    Serial.print( " " );
+    timeAdBlocks += micros() - time;
 
     // Check for wrap on buffer
     if( ++mAdSample >= NUM_SAMPLES )
     {
+      // Debug
+      timeFftCounts++;
+      for( int i=0; i<NUM_SAMPLES; i++ )
+      {
+        if( mFftDataReal[i] > adPeak )
+        {
+          adPeak = mFftDataReal[i];
+        }
+        adSum += mFftDataReal[i];
+      }
+
       // Process full buffer
       time = micros();
       fix_fft( mFftDataReal, mFftDataImag, NUM_SAMPLES, 0 );
-      Serial.print( "FFT - " );
-      Serial.println( micros() - time );
+      timeFftBlocks += micros() - time;
+      
+      // Get magnitude
+      for( unsigned char i=0; i<(NUM_SAMPLES/2); i++ )
+      {
+        mFftMag[i] = sqrt( pow( mFftDataReal[i], 2 ) + pow( mFftDataImag[i], 2 ) );
+        mDraw = true;
+      }
 
       // Reset for next pass
       mAdSample = 0;
@@ -90,13 +138,118 @@ void loop( void )
   // Update channel values
   
   // Check if time to update PWM
-  if( ( micros() - mPwmTime ) > PWM_UPDATE_TIME_US )
+  currentTime = micros();
+  if( ( currentTime - mPwmTime ) > PWM_UPDATE_TIME_US )
   {
+    // Debug
+    timePwmCounts++;
+    unsigned long d = ( currentTime - mPwmTime ) - PWM_UPDATE_TIME_US;
+    timePwmDelays += d;
+    if( d > timePwmPeakDelay )
+    {
+      timePwmPeakDelay = d;
+    }
+
     // Reset time for next update
-    mPwmTime = micros();
+    mPwmTime = currentTime;
     
     // Write new values
-    WriteChannels( mChannelValues );
+    time = micros();
+    UpdateChannels( mChannelValues );
+    timePwmBlocks += micros() - time;
+    
+    for( int i=0; i<64; i++ )
+    {
+      //mChannelValues[i]++;
+      //mChannelValues[i+64]++;
+      mChannelValues[i] = 0x20;
+      mChannelValues[i+64] = 0x20;
+    }
+  }
+
+  if( ( millis() - totalTime ) > 100 )
+  {
+    totalTime = millis();
+    /*
+    Serial.print( F(" AdCounts=") );
+    Serial.print( timeAdCounts );
+    Serial.print( F(" AdAvgDelay=") );
+    Serial.print( timeAdDelays / timeAdCounts );
+    Serial.print( F(" AdPeakDelay=") );
+    Serial.print( timeAdPeakDelay );
+    Serial.print( F(" AdAvgBlocks=") );
+    Serial.print( timeAdBlocks / timeAdCounts );
+    Serial.print( F(" FftCounts=") );
+    Serial.print( timeFftCounts );
+    Serial.print( F(" FftAvgBlocks=") );
+    Serial.print( timeFftBlocks / timeFftCounts );
+    Serial.print( F(" PwmCounts=") );
+    Serial.print( timePwmCounts );
+    Serial.print( F(" PwmAvgDelays=") );
+    Serial.print( timePwmDelays / timePwmCounts );
+    Serial.print( F(" PwmPeakDelay=") );
+    Serial.print( timePwmPeakDelay );
+    Serial.print( F(" PwmAvgBlocks=") );
+    Serial.print( timePwmBlocks / timePwmCounts );
+    Serial.print( "\r" );
+    */
+    /*
+    Serial.print( F(" AdPeak=") );
+    Serial.print( adPeak );
+    Serial.print( F(" AdSum=") );
+    Serial.print( adSum );
+    Serial.print( F(" FftCounts=") );
+    Serial.print( timeFftCounts );
+    Serial.print( "\n\r" );
+    adPeak = 0;
+    adSum = 0;
+    */
+    
+    timeAdCounts = 0;
+    timeAdDelays = 0;
+    timeAdPeakDelay = 0;
+    timeAdBlocks = 0;
+    timeFftCounts = 0;
+    timeFftBlocks = 0;
+    timePwmCounts = 0;
+    timePwmDelays = 0;
+    timePwmPeakDelay = 0;
+    timePwmBlocks = 0;
+    
+    /*
+    Serial.write( 0x1B );
+    Serial.write( '[' );
+    Serial.write( '4' );
+    Serial.write( 'A' );
+    */
+
+    //while( ( millis() - totalTime ) < 100 );
+    //totalTime = millis();
+    
+    mAdSample = 0;
+    mAdTime = micros();
+    mPwmTime = micros();
+    
+  }
+  
+  if( mDraw )
+  {
+    /*
+    mDraw = false;
+    for( int i=0; i<32; i++ )
+    {
+      Serial.print( mFftMag[i], HEX );
+      Serial.print( " :: " );
+    }
+    Serial.print( "\n\r" );
+    */
+    /*
+    Serial.print( 
+    Serial.write( 0x1B );
+    Serial.write( '[' );
+    Serial.write( '4' );
+    Serial.write( 'A' );
+    */
   }
 }
 
