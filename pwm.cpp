@@ -22,144 +22,147 @@
 
 void PwmInit( void )
 {
-  Wire.begin();
+    Serial.print( " TWSR=" );
+    Serial.print( TWSR );
+    Serial.print( " TWBR=" );
+    Serial.print( TWBR );
+    Serial.print( "\n\r" );
 
-  Wire.beginTransmission( IC1 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC1 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC2 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC2 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC3 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC3 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC4 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC4 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC5 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC5 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC6 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC6 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC7 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC7 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 
-  Wire.beginTransmission( IC8 );
-  Wire.write( (byte)REG_IODIRA );
-  Wire.write( (byte)0x00 );
-  Wire.write( (byte)0x00 );
-  Wire.endTransmission();
+    Wire.beginTransmission( IC8 );
+    Wire.write( (byte)REG_IODIRA );
+    Wire.write( (byte)0x00 );
+    Wire.write( (byte)0x00 );
+    Wire.endTransmission();
 }
 
 void UpdateChannels( unsigned char* channelValues )
 {
-  static byte mStepCount = 0;
-  static byte mBytes[16] = {0};
-  static byte mThreshold = 0;
-  
-  switch( mStepCount )
-  {
-    case 0: mThreshold = 0x20; break;
-    case 1: mThreshold = 0x40; break;
-    case 2: mThreshold = 0x60; break;
-    case 3: mThreshold = 0x80; break;
-    case 4: mThreshold = 0xA0; break;
-    case 5: mThreshold = 0xC0; break;
-    case 6: mThreshold = 0xE0; break;
-    case 7: mThreshold = 0xFF; break;
+    static byte mStepCount = 0;
+    static byte mBytes[16] = {0};
+    static byte mThreshold = 0;
+
+    switch( mStepCount )
+    {
+    case 0x00: mThreshold = 0x0F; break;
+    case 0x01: mThreshold = 0x1E; break;
+    case 0x02: mThreshold = 0x2D; break;
+    case 0x03: mThreshold = 0x3C; break;
+    case 0x04: mThreshold = 0x4B; break;
+    case 0x05: mThreshold = 0x5A; break;
+    case 0x06: mThreshold = 0x69; break;
+    case 0x07: mThreshold = 0x78; break;
+    case 0x08: mThreshold = 0x87; break;
+    case 0x09: mThreshold = 0x96; break;
+    case 0x0A: mThreshold = 0xA5; break;
+    case 0x0B: mThreshold = 0xB4; break;
+    case 0x0C: mThreshold = 0xC3; break;
+    case 0x0D: mThreshold = 0xD2; break;
+    case 0x0E: mThreshold = 0xE1; break;
+    case 0x0F: mThreshold = 0xF0; break;
     default: break;
-  }
+    }
 
-  for( int i=0; i<16; i++ )
-  {
-    mBytes[i] = 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 0] < mThreshold ) ? 0x01 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 1] < mThreshold ) ? 0x02 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 2] < mThreshold ) ? 0x04 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 3] < mThreshold ) ? 0x08 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 4] < mThreshold ) ? 0x10 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 5] < mThreshold ) ? 0x20 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 6] < mThreshold ) ? 0x40 : 0x00;
-    mBytes[i] |= ( channelValues[i*8 + 7] < mThreshold ) ? 0x80 : 0x00;
-  }
-  
-  if( ++mStepCount >= 8 )
-  {
-    mStepCount = 0;
-  }
-  
-  Serial.print( " CH1=" );
-  Serial.print( channelValues[0] );
-  Serial.print( " CH2=" );
-  Serial.print( channelValues[1] );
-  Serial.print( " BYTE1=" );
-  Serial.print( mBytes[0] );
-  Serial.print( "\n\r" );
+    for( int i=0; i<16; i++ )
+    {
+        mBytes[i] = 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 0] > mThreshold ) ? ~0x01 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 1] > mThreshold ) ? ~0x02 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 2] > mThreshold ) ? ~0x04 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 3] > mThreshold ) ? ~0x08 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 4] > mThreshold ) ? ~0x10 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 5] > mThreshold ) ? ~0x20 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 6] > mThreshold ) ? ~0x40 : 0xFF;
+        mBytes[i] &= ( channelValues[i*8 + 7] > mThreshold ) ? ~0x80 : 0xFF;
+    }
 
-  byte result;
-  Wire.begin();
+    if( ++mStepCount >= 16 )
+    {
+        mStepCount = 0;
+    }
 
-  Wire.beginTransmission( IC1 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[0], 2 );
-  result = Wire.endTransmission();
-  /*
-  Wire.beginTransmission( IC2 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[2], 2 );
-  result = Wire.endTransmission();
+    byte result;
 
-  Wire.beginTransmission( IC3 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[4], 2 );
-  result = Wire.endTransmission();
+    Wire.beginTransmission( IC1 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[0], 2 );
+    result = Wire.endTransmission();
 
-  Wire.beginTransmission( IC4 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[6], 2 );
-  result = Wire.endTransmission();
+    Wire.beginTransmission( IC2 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[2], 2 );
+    result = Wire.endTransmission();
+
+    Wire.beginTransmission( IC3 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[4], 2 );
+    result = Wire.endTransmission();
+
+    Wire.beginTransmission( IC4 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[6], 2 );
+    result = Wire.endTransmission();
+
+    Wire.beginTransmission( IC5 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[8], 2 );
+    result = Wire.endTransmission();
+
+    Wire.beginTransmission( IC6 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[10], 2 );
+    result = Wire.endTransmission();
 /*
-  Wire.beginTransmission( IC5 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[8], 2 );
-  result = Wire.endTransmission();
-  
-  Wire.beginTransmission( IC6 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[10], 2 );
-  result = Wire.endTransmission();
+    Wire.beginTransmission( IC7 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[12], 2 );
+    result = Wire.endTransmission();
 
-  Wire.beginTransmission( IC7 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[12], 2 );
-  result = Wire.endTransmission();
-
-  Wire.beginTransmission( IC8 );
-  Wire.write( (byte)REG_GPIOA );
-  Wire.write( &mBytes[14], 2 );
-  result = Wire.endTransmission();
+    Wire.beginTransmission( IC8 );
+    Wire.write( (byte)REG_GPIOA );
+    Wire.write( &mBytes[14], 2 );
+    result = Wire.endTransmission();
 */
 }
 
