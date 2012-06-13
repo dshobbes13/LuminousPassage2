@@ -2,7 +2,15 @@
 #include "pwm.h"
 
 #include <Arduino.h>
-#include <Wire.h>
+
+#include "utility.h"
+
+//#define TWI
+#define BLOCK
+
+#ifdef TWI
+#include "twi.h"
+#endif
 
 #define IC1 0x20
 #define IC2 0x21
@@ -20,67 +28,113 @@
 
 #define NUM_STEPS  8
 
+#define TWSR_STATUS_START   0x08
+#define TWSR_STATUS_RSTART  0x10
+#define TWSR_STATUS_SLAW_ACK    0x18
+#define TWSR_STATUS_SLAW_NACK   0x20
+#define TWSR_STATUS_DATA_ACK    0x28
+#define TWSR_STATUS_DATA_NACK   0x30
+#define TWSR_STATUS_LOST        0x38
+
+#define TWSR_STATUS     ( TWSR & 0xF8 )
+
+unsigned char buffer[3];
+
+volatile unsigned char mIcStep = 0;
+volatile unsigned char mTwiStep = 0;
+volatile unsigned char mAddresses[6] = {0};
+volatile unsigned char mBytes[16] = {0};
+
+void SendStart( void );
+void SendAddress( unsigned char address );
+void SendData( unsigned char data );
+void SendStop( void );
+
 void PwmInit( void )
 {
-    Serial.print( " TWSR=" );
-    Serial.print( TWSR );
-    Serial.print( " TWBR=" );
-    Serial.print( TWBR );
-    Serial.print( "\n\r" );
 
-    Wire.beginTransmission( IC1 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    // Set I2C to 400kHz
+#ifdef TWI
+    twi_init();
+#endif
+    cbi( TWSR, TWPS1 );
+    cbi( TWSR, TWPS0 );
+    TWBR=12;
+    TWCR = _BV( TWEN );
 
-    Wire.beginTransmission( IC2 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    digitalWrite( SDA, 1 );
+    digitalWrite( SCL, 1 );
 
-    Wire.beginTransmission( IC3 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    buffer[0] = REG_IODIRA;
+    buffer[1] = 0x00;
+    buffer[2] = 0x00;
 
-    Wire.beginTransmission( IC4 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+#ifdef TWI
+    twi_writeTo( IC1, buffer, 3, false, true );
+    twi_writeTo( IC2, buffer, 3, false, true );
+    twi_writeTo( IC3, buffer, 3, false, true );
+    twi_writeTo( IC4, buffer, 3, false, true );
+    twi_writeTo( IC5, buffer, 3, false, true );
+    twi_writeTo( IC6, buffer, 3, false, true );
+#else
+    SendStart();
+    SendAddress( IC1 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
 
-    Wire.beginTransmission( IC5 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    SendStart();
+    SendAddress( IC2 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
 
-    Wire.beginTransmission( IC6 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    SendStart();
+    SendAddress( IC3 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
 
-    Wire.beginTransmission( IC7 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    SendStart();
+    SendAddress( IC4 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
 
-    Wire.beginTransmission( IC8 );
-    Wire.write( (byte)REG_IODIRA );
-    Wire.write( (byte)0x00 );
-    Wire.write( (byte)0x00 );
-    Wire.endTransmission();
+    SendStart();
+    SendAddress( IC5 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC6 );
+    SendData( REG_IODIRA );
+    SendData( 0x00 );
+    SendData( 0x00 );
+    SendStop();
+#endif
+
+    mAddresses[0] = IC1 << 1;
+    mAddresses[1] = IC2 << 1;
+    mAddresses[2] = IC3 << 1;
+    mAddresses[3] = IC4 << 1;
+    mAddresses[4] = IC5 << 1;
+    mAddresses[5] = IC6 << 1;
+
+#ifndef BLOCK
+    TWCR = _BV( TWEN ) | _BV( TWIE );
+#endif
 }
 
 void UpdateChannels( unsigned char* channelValues )
 {
     static byte mStepCount = 0;
-    static byte mBytes[16] = {0};
     static byte mThreshold = 0;
 
     switch( mStepCount )
@@ -122,47 +176,145 @@ void UpdateChannels( unsigned char* channelValues )
         mStepCount = 0;
     }
 
-    byte result;
+#ifdef TWI
+    buffer[0] = REG_GPIOA;
 
-    Wire.beginTransmission( IC1 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[0], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[0];
+    buffer[2] = mBytes[1];
+    twi_writeTo( IC1, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC2 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[2], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[2];
+    buffer[2] = mBytes[3];
+    twi_writeTo( IC2, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC3 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[4], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[4];
+    buffer[2] = mBytes[5];
+    twi_writeTo( IC3, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC4 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[6], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[6];
+    buffer[2] = mBytes[7];
+    twi_writeTo( IC4, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC5 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[8], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[8];
+    buffer[2] = mBytes[9];
+    twi_writeTo( IC5, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC6 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[10], 2 );
-    result = Wire.endTransmission();
-/*
-    Wire.beginTransmission( IC7 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[12], 2 );
-    result = Wire.endTransmission();
+    buffer[1] = mBytes[10];
+    buffer[2] = mBytes[11];
+    twi_writeTo( IC6, buffer, 3, false, true );
 
-    Wire.beginTransmission( IC8 );
-    Wire.write( (byte)REG_GPIOA );
-    Wire.write( &mBytes[14], 2 );
-    result = Wire.endTransmission();
-*/
+#elif defined(BLOCK)
+
+    SendStart();
+    SendAddress( IC1 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[0] );
+    SendData( mBytes[1] );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC2 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[2] );
+    SendData( mBytes[3] );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC3 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[4] );
+    SendData( mBytes[5] );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC4 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[6] );
+    SendData( mBytes[7] );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC5 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[8] );
+    SendData( mBytes[9] );
+    SendStop();
+
+    SendStart();
+    SendAddress( IC6 );
+    SendData( REG_GPIOA );
+    SendData( mBytes[10] );
+    SendData( mBytes[11] );
+    SendStop();
+#else
+    // Start new ISR transfer
+    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
+#endif
+}
+
+void SendStart( void )
+{
+    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendAddress( unsigned char address )
+{
+    TWDR = ( address << 1 );
+    TWCR = _BV( TWINT ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendData( unsigned char data )
+{
+    TWDR = data;
+    TWCR = _BV( TWINT ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendStop( void )
+{
+    TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN );
+    while( TWCR & _BV( TWSTO ) );
+}
+
+ISR( TWI_vect )
+{
+    switch( mTwiStep )
+    {
+    case 0:
+        // Send address
+        TWDR = mAddresses[mIcStep];
+        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+        mTwiStep++;
+        break;
+    case 1:
+        // Send 1st byte
+        TWDR = mBytes[mIcStep*2];
+        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+        mTwiStep++;
+        break;
+    case 2:
+        // Send 2nd byte
+        TWDR = mBytes[mIcStep*2 + 1];
+        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+        mTwiStep++;
+        break;
+    case 3:
+        // Send stop byte and wait
+        TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN ) | _BV( TWIE );
+        while( TWCR & _BV( TWSTO ) );
+        mTwiStep = 0;
+        // Check if next ic
+        if( ++mIcStep < 6 )
+        {
+            // Send next start
+            TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
+        }
+        else
+        {
+            mIcStep = 0;
+        }
+    }
 }
 

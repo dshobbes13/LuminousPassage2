@@ -1,19 +1,10 @@
 
-//#include "util.h"
+
 #include "fft.h"
 #include "pwm.h"
-#include <Wire.h>
+#include "utility.h"
 
-#define DEBUG 0
-
-#ifndef cbi
-#define cbi( sfr, bit ) ( _SFR_BYTE( sfr ) &= ~_BV( bit ) )
-#endif
-
-// Set bit macro for SFRs
-#ifndef sbi
-#define sbi( sfr, bit ) ( _SFR_BYTE( sfr ) |= _BV( bit ) )
-#endif
+#define DEBUG 1
 
 
 #define NUM_SAMPLES         64
@@ -42,12 +33,6 @@ void setup( void )
     sbi( ADCSRA, ADPS2 );
     cbi( ADCSRA, ADPS1 );
     cbi( ADCSRA, ADPS0 );
-
-    // Set I2C to 400kHz
-    Wire.begin();
-    cbi( TWSR, TWPS1 );
-    cbi( TWSR, TWPS0 );
-    TWBR=12;
 
     // Init serial port for debugging
     Serial.begin( 115200 );
