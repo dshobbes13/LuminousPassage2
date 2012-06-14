@@ -1,3 +1,8 @@
+// File: pwm.cpp
+
+//*****************
+// INCLUDES
+//*****************
 
 #include "pwm.h"
 
@@ -5,12 +10,16 @@
 
 #include "utility.h"
 
-//#define TWI
-#define BLOCK
-
-#ifdef TWI
+#ifdef PWM_TWI_VERSION
 #include "twi.h"
 #endif
+
+
+//*****************
+// DEFINITIONS
+//*****************
+
+#define DEBUG
 
 #define IC1 0x20
 #define IC2 0x21
@@ -26,8 +35,6 @@
 #define REG_GPIOA  0x12
 #define REG_GPIOB  0x13
 
-#define NUM_STEPS  8
-
 #define TWSR_STATUS_START   0x08
 #define TWSR_STATUS_RSTART  0x10
 #define TWSR_STATUS_SLAW_ACK    0x18
@@ -38,45 +45,83 @@
 
 #define TWSR_STATUS     ( TWSR & 0xF8 )
 
-unsigned char buffer[3];
 
+//*****************
+// VARIABLES
+//*****************
+
+#ifdef PWM_TWI_VERSION
+unsigned char mBuffer[3];
+#endif
+
+#ifdef PWM_ISR_VERSION
 volatile unsigned char mIcStep = 0;
 volatile unsigned char mTwiStep = 0;
 volatile unsigned char mAddresses[6] = {0};
+volatile unsigned char mBusy = 0;
+volatile unsigned char mStatus = 0;
+#endif
+
 volatile unsigned char mBytes[16] = {0};
 
+
+//*****************
+// PRIVATE PROTOTYPES
+//*****************
+
+#ifdef PWM_BLOCKING_VERSION
 void SendStart( void );
 void SendAddress( unsigned char address );
 void SendData( unsigned char data );
 void SendStop( void );
+#endif
+
+#ifdef PWM_ISR_VERSION
+void InitiateTransfer( void );
+#endif
+
+
+//*****************
+// PUBLIC
+//*****************
 
 void PwmInit( void )
 {
 
-    // Set I2C to 400kHz
-#ifdef TWI
+#ifdef PWM_TWI_VERSION
     twi_init();
 #endif
+
+    // Set I2C to 400kHz
     cbi( TWSR, TWPS1 );
     cbi( TWSR, TWPS0 );
     TWBR=12;
-    TWCR = _BV( TWEN );
+
+#ifdef PWM_ISR_VERSION
+#ifdef DEBUG
+    // Debug
+    DDRD = DDRD | 0x04;
+    PORTD = PORTD & ~0x04;
+#endif
+#endif
 
     digitalWrite( SDA, 1 );
     digitalWrite( SCL, 1 );
 
-    buffer[0] = REG_IODIRA;
-    buffer[1] = 0x00;
-    buffer[2] = 0x00;
+#ifdef PWM_TWI_VERSION
+    mBuffer[0] = REG_IODIRA;
+    mBuffer[1] = 0x00;
+    mBuffer[2] = 0x00;
 
-#ifdef TWI
-    twi_writeTo( IC1, buffer, 3, false, true );
-    twi_writeTo( IC2, buffer, 3, false, true );
-    twi_writeTo( IC3, buffer, 3, false, true );
-    twi_writeTo( IC4, buffer, 3, false, true );
-    twi_writeTo( IC5, buffer, 3, false, true );
-    twi_writeTo( IC6, buffer, 3, false, true );
-#else
+    twi_writeTo( IC1, mBuffer, 3, false, true );
+    twi_writeTo( IC2, mBuffer, 3, false, true );
+    twi_writeTo( IC3, mBuffer, 3, false, true );
+    twi_writeTo( IC4, mBuffer, 3, false, true );
+    twi_writeTo( IC5, mBuffer, 3, false, true );
+    twi_writeTo( IC6, mBuffer, 3, false, true );
+#endif
+
+#ifdef PWM_BLOCKING_VERSION
     SendStart();
     SendAddress( IC1 );
     SendData( REG_IODIRA );
@@ -120,6 +165,8 @@ void PwmInit( void )
     SendStop();
 #endif
 
+#ifdef PWM_ISR_VERSION
+    // Init variables
     mAddresses[0] = IC1 << 1;
     mAddresses[1] = IC2 << 1;
     mAddresses[2] = IC3 << 1;
@@ -127,12 +174,20 @@ void PwmInit( void )
     mAddresses[4] = IC5 << 1;
     mAddresses[5] = IC6 << 1;
 
-#ifndef BLOCK
+    // Enable and setup for interrupts
     TWCR = _BV( TWEN ) | _BV( TWIE );
+
+    // Initialize for output pins
+    for( unsigned char i=0; i<16; i++ )
+    {
+        mBytes[i] = 0x00;
+    }
+    InitiateTransfer();
+    while( mBusy );
 #endif
 }
 
-void UpdateChannels( unsigned char* channelValues )
+void PwmUpdateChannels( unsigned char* channelValues )
 {
     static byte mStepCount = 0;
     static byte mThreshold = 0;
@@ -176,35 +231,35 @@ void UpdateChannels( unsigned char* channelValues )
         mStepCount = 0;
     }
 
-#ifdef TWI
-    buffer[0] = REG_GPIOA;
+#ifdef PWM_TWI_VERSION
+    mBuffer[0] = REG_GPIOA;
 
-    buffer[1] = mBytes[0];
-    buffer[2] = mBytes[1];
-    twi_writeTo( IC1, buffer, 3, false, true );
+    mBuffer[1] = mBytes[0];
+    mBuffer[2] = mBytes[1];
+    twi_writeTo( IC1, mBuffer, 3, false, true );
 
-    buffer[1] = mBytes[2];
-    buffer[2] = mBytes[3];
-    twi_writeTo( IC2, buffer, 3, false, true );
+    mBuffer[1] = mBytes[2];
+    mBuffer[2] = mBytes[3];
+    twi_writeTo( IC2, mBuffer, 3, false, true );
 
-    buffer[1] = mBytes[4];
-    buffer[2] = mBytes[5];
-    twi_writeTo( IC3, buffer, 3, false, true );
+    mBuffer[1] = mBytes[4];
+    mBuffer[2] = mBytes[5];
+    twi_writeTo( IC3, mBuffer, 3, false, true );
 
-    buffer[1] = mBytes[6];
-    buffer[2] = mBytes[7];
-    twi_writeTo( IC4, buffer, 3, false, true );
+    mBuffer[1] = mBytes[6];
+    mBuffer[2] = mBytes[7];
+    twi_writeTo( IC4, mBuffer, 3, false, true );
 
-    buffer[1] = mBytes[8];
-    buffer[2] = mBytes[9];
-    twi_writeTo( IC5, buffer, 3, false, true );
+    mBuffer[1] = mBytes[8];
+    mBuffer[2] = mBytes[9];
+    twi_writeTo( IC5, mBuffer, 3, false, true );
 
-    buffer[1] = mBytes[10];
-    buffer[2] = mBytes[11];
-    twi_writeTo( IC6, buffer, 3, false, true );
+    mBuffer[1] = mBytes[10];
+    mBuffer[2] = mBytes[11];
+    twi_writeTo( IC6, mBuffer, 3, false, true );
+#endif
 
-#elif defined(BLOCK)
-
+#ifdef PWM_BLOCKING_VERSION
     SendStart();
     SendAddress( IC1 );
     SendData( REG_GPIOA );
@@ -246,12 +301,18 @@ void UpdateChannels( unsigned char* channelValues )
     SendData( mBytes[10] );
     SendData( mBytes[11] );
     SendStop();
-#else
-    // Start new ISR transfer
-    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
+#endif
+
+#ifdef PWM_ISR_VERSION
+    InitiateTransfer();
 #endif
 }
 
+//*****************
+// PRIVATE
+//*****************
+
+#ifdef PWM_BLOCKING_VERSION
 void SendStart( void )
 {
     TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN );
@@ -277,30 +338,45 @@ void SendStop( void )
     TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN );
     while( TWCR & _BV( TWSTO ) );
 }
+#endif
+
+#ifdef PWM_ISR_VERSION
+void InitiateTransfer( void )
+{
+    mBusy = 1;
+    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
+}
 
 ISR( TWI_vect )
 {
+    PORTD = PORTD | 0x04;
     switch( mTwiStep )
     {
     case 0:
         // Send address
-        TWDR = mAddresses[mIcStep];
+        TWDR = (unsigned char)mAddresses[mIcStep];
         TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
         mTwiStep++;
         break;
     case 1:
-        // Send 1st byte
-        TWDR = mBytes[mIcStep*2];
+        // Send register
+        TWDR = (unsigned char)REG_GPIOA;
         TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
         mTwiStep++;
         break;
     case 2:
-        // Send 2nd byte
-        TWDR = mBytes[mIcStep*2 + 1];
+        // Send 1st byte
+        TWDR = (unsigned char)mBytes[mIcStep*2];
         TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
         mTwiStep++;
         break;
     case 3:
+        // Send 2nd byte
+        TWDR = (unsigned char)mBytes[mIcStep*2 + 1];
+        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+        mTwiStep++;
+        break;
+    case 4:
         // Send stop byte and wait
         TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN ) | _BV( TWIE );
         while( TWCR & _BV( TWSTO ) );
@@ -314,7 +390,15 @@ ISR( TWI_vect )
         else
         {
             mIcStep = 0;
+            mBusy = 0;
         }
+        break;
+    default:
+        // Bad, reset to start
+        TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
+        break;
     }
+    PORTD = PORTD & ~0x04;
 }
+#endif
 

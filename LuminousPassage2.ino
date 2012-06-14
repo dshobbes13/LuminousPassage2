@@ -3,6 +3,7 @@
 #include "fft.h"
 #include "pwm.h"
 #include "utility.h"
+#include "ad.h"
 
 #define DEBUG 1
 
@@ -151,7 +152,7 @@ void loop( void )
 
         // Write new values
         time = micros();
-        UpdateChannels( mChannelValues );
+        PwmUpdateChannels( mChannelValues );
         timePwmBlocks += micros() - time;
 
         static int wait = 0;

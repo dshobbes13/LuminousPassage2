@@ -362,7 +362,7 @@ void twi_releaseBus(void)
   twi_state = TWI_READY;
 }
 
-#ifdef TWI
+#ifdef PWM_TWI_VERSION
 SIGNAL(TWI_vect)
 {
   switch(TW_STATUS){
