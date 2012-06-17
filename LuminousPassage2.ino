@@ -4,31 +4,20 @@
 #include "pwm.h"
 #include "utility.h"
 #include "ad.h"
+#include "testFft.h"
 
 #define DEBUG 1
 
 
-#define NUM_SAMPLES         64
-#define AD_SAMPLE_TIME_US   50
-#define AD_INPUT_PIN        0
-#define PWM_UPDATE_TIME_US  1250
-#define NUM_CHANNELS        128
+char mFftDataReal[AD_NUM_SAMPLES];
+char mFftDataImag[AD_NUM_SAMPLES];
+unsigned int mFftMag[AD_NUM_SAMPLES];
 
-char mFftDataReal[NUM_SAMPLES];
-char mFftDataImag[NUM_SAMPLES];
-unsigned int mFftMag[NUM_SAMPLES/2];
-unsigned char mDraw = false;
-
-
-unsigned long mAdTime;
-int mAdSample;
-
-unsigned long mPwmTime;
-
-unsigned char mChannelValues[NUM_CHANNELS];
+unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
 
 void setup( void )
 {
+    //delay( 2000 );
 
     // Set A/D prescale to 16
     sbi( ADCSRA, ADPS2 );
@@ -39,141 +28,110 @@ void setup( void )
     Serial.begin( 115200 );
     while( !Serial );
 
-    Serial.print( " TWSR=" );
-    Serial.print( TWSR );
-    Serial.print( " TWBR=" );
-    Serial.print( TWBR );
-    Serial.print( "\n\r" );
-
-    // Init variables
-    mAdSample = 0;
-    mAdTime = micros();
-    mPwmTime = micros();
-    for( int i=0; i<NUM_CHANNELS; i++ )
-    {
-        mChannelValues[i] = 128;
-    }
-
     // Init modules
+    AdInit();
     PwmInit();
+
+    //TestFft();
 }
 
 void loop( void )
 {
-    static unsigned long totalTime = millis();
-    static unsigned long time;
-    static unsigned long timeAdCounts = 0;
-    static unsigned long timeAdDelays = 0;
-    static unsigned long timeAdPeakDelay = 0;
-    static unsigned long timeAdBlocks = 0;
-    static unsigned long timeFftCounts = 0;
-    static unsigned long timeFftBlocks = 0;
-    static unsigned long timePwmCounts = 0;
-    static unsigned long timePwmDelays = 0;
-    static unsigned long timePwmPeakDelay = 0;
-    static unsigned long timePwmBlocks = 0;
-    static unsigned long adPeak = 0;
-    static unsigned long adSum = 0;
+    static unsigned long mDebugMeasureTime = 0;
+    
+    static unsigned long mDebugAdBlockTime = 0;
+    static unsigned long mDebugAdBlockCount = 0;
+    
+    static unsigned long mDebugFftBlockTime = 0;
+    static unsigned long mDebugFftBlockCount = 0;
 
+    static unsigned long mDebugPwmBlockTime = 0;
+    static unsigned long mDebugPwmBlockCount = 0;
 
-    unsigned long currentTime;
+    static unsigned char mDebugAdPeak = 0;
+    static unsigned long mDebugAdSum = 0;
+    static unsigned long mDebugAdCount = 0;
 
-    /*
+    static unsigned int mFftFourBuckets[4] = {0};
+
     // Check for A/D sample
-    currentTime = micros();
-    if( ( currentTime - mAdTime ) > AD_SAMPLE_TIME_US )
+    AdProcess();
+    if( AdReady() )
     {
-        // Debug
-        timeAdCounts++;
-        unsigned long d = ( currentTime - mAdTime ) - AD_SAMPLE_TIME_US;
-        timeAdDelays += d;
-        if( d > timeAdPeakDelay )
+        // Get ad samples
+        mDebugMeasureTime = micros();
+        AdData( (unsigned char*)mFftDataReal );
+        mDebugAdBlockTime += micros() - mDebugMeasureTime;
+        mDebugAdBlockCount++;
+
+        static unsigned char mDebugAdTempSample;
+        for( unsigned int i=0; i<AD_NUM_SAMPLES; i++ )
         {
-            timeAdPeakDelay = d;
+            mDebugAdTempSample = (unsigned char)mFftDataReal[i];
+            if( mDebugAdTempSample > mDebugAdPeak )
+            {
+                mDebugAdPeak = mDebugAdTempSample;
+            }
+            mDebugAdSum += mDebugAdTempSample;
+            mDebugAdCount++;
         }
 
-        // Reset time for next sample
-        mAdTime = currentTime;
-
-        // Sample A/D
-        time = micros();
-        mFftDataReal[mAdSample] = analogRead( AD_INPUT_PIN );
-        timeAdBlocks += micros() - time;
-
-        // Check for wrap on buffer
-        if( ++mAdSample >= NUM_SAMPLES )
+        // Prep fft data
+        mDebugMeasureTime = micros();
+        unsigned char offset = 128;
+        for( unsigned int i=0; i<AD_NUM_SAMPLES; i++ )
         {
-            // Debug
-            timeFftCounts++;
-            for( int i=0; i<NUM_SAMPLES; i++ )
-            {
-              if( mFftDataReal[i] > adPeak )
-              {
-                adPeak = mFftDataReal[i];
-              }
-              adSum += mFftDataReal[i];
-            }
-
-            // Process full buffer
-            time = micros();
-            fix_fft( mFftDataReal, mFftDataImag, NUM_SAMPLES, 0 );
-            timeFftBlocks += micros() - time;
-
-            // Get magnitude
-            for( unsigned char i=0; i<(NUM_SAMPLES/2); i++ )
-            {
-                mFftMag[i] = sqrt( pow( mFftDataReal[i], 2 ) + pow( mFftDataImag[i], 2 ) );
-                mDraw = true;
-            }
-
-            // Reset for next pass
-            mAdSample = 0;
+            mFftDataReal[i] = (unsigned char)mFftDataReal[i] - offset;
+            mFftDataImag[i] = 0;
         }
+
+        // Do Fft
+        fix_fft( mFftDataReal, mFftDataImag, 6, 0 );
+        Magnitude( mFftMag, mFftDataReal, mFftDataImag, AD_NUM_SAMPLES/2 );
+        mDebugFftBlockTime += micros() - mDebugMeasureTime;
+        mDebugFftBlockCount++;
+    }
+
+    // Update channel values
+    mFftFourBuckets[0] = 0;
+    mFftFourBuckets[1] = 0;
+    mFftFourBuckets[2] = 0;
+    mFftFourBuckets[3] = 0;
+    for( unsigned char i=0; i<AD_NUM_SAMPLES/2; i++ )
+    {
+        mFftFourBuckets[ (i&0xF8)>>3 ] += mFftMag[i];
+    }
+    /*
+    for( unsigned char i=0; i<4; i++ )
+    {
+        if( mFftFourBuckets[i] > 0x10 )
+        {
+            mFftFourBuckets[i] = mFftFourBuckets[i] * 4;
+        }
+        mChannelValues[i] = mFftFourBuckets[i];
     }
     */
 
-    // Update channel values
-
-    // Check if time to update PWM
-    currentTime = micros();
-    if( ( currentTime - mPwmTime ) > PWM_UPDATE_TIME_US )
+    static unsigned long mChannelSweepTime = millis();
+    if( millis() - mChannelSweepTime > 10 )
     {
-        // Debug
-        timePwmCounts++;
-        unsigned long d = ( currentTime - mPwmTime ) - PWM_UPDATE_TIME_US;
-        timePwmDelays += d;
-        if( d > timePwmPeakDelay )
+        mChannelSweepTime = millis();
+        for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
         {
-            timePwmPeakDelay = d;
+            mChannelValues[i]++;
         }
-
-        // Reset time for next update
-        mPwmTime = currentTime;
-
-        // Write new values
-        time = micros();
-        PwmUpdateChannels( mChannelValues );
-        timePwmBlocks += micros() - time;
-
-        static int wait = 0;
-        if( ++wait >= 32 )
-        {
-            wait = 0;
-            for( int i=0; i<64; i++ )
-            {
-                mChannelValues[i]++;
-                mChannelValues[i+64]++;
-                //mChannelValues[i] = 0x20;
-                //mChannelValues[i+64] = 0x20;
-            }
-        }
+        PwmSetChannels( mChannelValues );
     }
+    PwmProcess();
 
 #if DEBUG
-    if( ( millis() - totalTime ) > 5000 )
+    static unsigned long mDebugPrintTime = millis();
+    if( ( millis() - mDebugPrintTime ) > 1000 )
     {
-        totalTime = millis();
+        mDebugPrintTime = millis();
 
+        /*
+        // Timing
         Serial.print( F(" AdCounts=") );
         Serial.print( timeAdCounts );
         Serial.print( F(" AdAvgDelay=") );
@@ -195,29 +153,7 @@ void loop( void )
         Serial.print( F(" PwmAvgBlocks=") );
         Serial.print( timePwmBlocks / timePwmCounts );
         Serial.print( "\n\r" );
-
-        /*
-        Serial.print( F(" AdPeak=") );
-        Serial.print( adPeak );
-        Serial.print( F(" AdSum=") );
-        Serial.print( adSum );
-        Serial.print( F(" FftCounts=") );
-        Serial.print( timeFftCounts );
-        Serial.print( "\n\r" );
-        adPeak = 0;
-        adSum = 0;
         */
-
-        timeAdCounts = 0;
-        timeAdDelays = 0;
-        timeAdPeakDelay = 0;
-        timeAdBlocks = 0;
-        timeFftCounts = 0;
-        timeFftBlocks = 0;
-        timePwmCounts = 0;
-        timePwmDelays = 0;
-        timePwmPeakDelay = 0;
-        timePwmBlocks = 0;
 
         /*
         Serial.write( 0x1B );
@@ -226,32 +162,58 @@ void loop( void )
         Serial.write( 'A' );
         */
 
-        //while( ( millis() - totalTime ) < 100 );
-        //totalTime = millis();
+        // Analog audio
+        Serial.print( F(" AdPeak=") );
+        Serial.print( mDebugAdPeak );
+        Serial.print( F(" AdAvg=") );
+        Serial.print( mDebugAdSum / mDebugAdCount );
+        Serial.print( F(" FftCounts=") );
+        Serial.print( mDebugFftBlockCount );
 
-        mAdSample = 0;
-        mAdTime = micros();
-        mPwmTime = micros();
-    }
-#endif
-
-    /*
-    if( mDraw )
-    {
-        mDraw = false;
+        /*
+        Serial.print( F(" AD Samples: ") );
         for( int i=0; i<32; i++ )
         {
-            Serial.print( mFftMag[i], HEX );
-            Serial.print( " :: " );
+            if( mAdSamples[i] < 16 )
+            {
+                Serial.write( '0' );
+                Serial.print( mAdSamples[i], HEX );
+            }
+            else
+            {
+                Serial.print( mAdSamples[i], HEX );
+            }
+            Serial.print( "::" );
         }
         Serial.print( "\n\r" );
+        */
 
+        //PrintDataUint( " FFT:", mFftMag, AD_NUM_SAMPLES/2 );
+        PrintDataUint( " FFT4:", mFftFourBuckets, 4 );
+        Serial.print( "\n\r" );
+
+        /*
         Serial.print( 
         Serial.write( 0x1B );
         Serial.write( '[' );
         Serial.write( '4' );
         Serial.write( 'A' );
+        */
+
+        mDebugAdBlockTime = 0;
+        mDebugAdBlockCount = 0;
+
+        mDebugFftBlockTime = 0;
+        mDebugFftBlockCount = 0;
+
+        mDebugPwmBlockTime = 0;
+        mDebugPwmBlockCount = 0;
+
+        mDebugAdPeak = 0;
+        mDebugAdSum = 0;
+        mDebugAdCount = 0;
     }
-    */
+#endif
+
 }
 

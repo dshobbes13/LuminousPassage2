@@ -15,16 +15,17 @@
 // DEFINITIONS
 //*****************
 
-#define NUM_SAMPLES     64
+#define AD_SAMPLE_TIME_US   50
+#define AD_INPUT_PIN        0
 
 //*****************
 // VARIABLES
 //*****************
 
-volatile unsigned char mAdData[2][NUM_SAMPLES];
-volatile unsigned char mAdSampleArray;
-volatile unsigned char mAdSampleNumber;
-volatile unsigned char mAdReady;
+volatile static unsigned char mAdData[2][AD_NUM_SAMPLES] = {0};
+volatile static unsigned char mAdSampleArray = 0;
+volatile static unsigned char mAdSampleNumber = 0;
+volatile static unsigned char mAdReady = 0;
 
 
 //*****************
@@ -39,6 +40,7 @@ volatile unsigned char mAdReady;
 void AdInit( void )
 {
     // Configure AD system
+    analogReference( DEFAULT );
 
     // Configure Timer
 
@@ -47,18 +49,45 @@ void AdInit( void )
     // Start sampling
 }
 
-unsigned char AdReady( void )
+void AdProcess( void )
 {
-    return mAdReady;
+    static unsigned long mAdTime = micros();
+    static unsigned long mCurrentTime = micros();
+    static unsigned char mAdSample = 0;
+
+    mCurrentTime = micros();
+    if( ( mCurrentTime - mAdTime ) > AD_SAMPLE_TIME_US )
+    {
+        // Reset time for next sample
+        mAdTime = mCurrentTime;
+
+        // Sample A/D
+        mAdSample = (unsigned char)( analogRead( AD_INPUT_PIN ) >> 2 );
+        mAdData[0][mAdSampleNumber] = mAdSample;
+
+        // Check for wrap on buffer
+        if( ++mAdSampleNumber >= AD_NUM_SAMPLES )
+        {
+            // Reset for next pass
+            mAdSampleNumber = 0;
+            mAdReady = 1;
+        }
+    }
 }
 
-void AdData( signed char* data )
+unsigned char AdReady( void )
 {
-    memcpy( data, (const void*)&mAdData[0], NUM_SAMPLES );
-    for( unsigned char i=0; i<NUM_SAMPLES; i++ )
+    if( mAdReady )
     {
-        data[i] = data[i] - 128;
+        mAdReady = 0;
+        return 1;
     }
+    return 0;
+}
+
+void AdData( unsigned char* data )
+{
+    memcpy( data, (const void*)&mAdData[0], AD_NUM_SAMPLES );
 }
 
 ISR( AD_vect )

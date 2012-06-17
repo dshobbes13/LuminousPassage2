@@ -7,6 +7,8 @@
 // DEFINITIONS
 //*****************
 
+#define AD_NUM_SAMPLES      64
+
 
 //*****************
 // PUBLIC FUNCTIONS
@@ -14,8 +16,10 @@
 
 void AdInit( void );
 
+void AdProcess( void );
+
 unsigned char AdReady( void );
 
-void AdData( signed char* data );
+void AdData( unsigned char* data );
 
 #endif

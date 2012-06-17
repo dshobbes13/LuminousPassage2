@@ -21,6 +21,8 @@
 
 #define DEBUG
 
+#define PWM_UPDATE_TIME_US  1250
+
 #define IC1 0x20
 #define IC2 0x21
 #define IC3 0x22
@@ -51,18 +53,19 @@
 //*****************
 
 #ifdef PWM_TWI_VERSION
-unsigned char mBuffer[3];
+unsigned static char mBuffer[3];
 #endif
 
 #ifdef PWM_ISR_VERSION
-volatile unsigned char mIcStep = 0;
-volatile unsigned char mTwiStep = 0;
-volatile unsigned char mAddresses[6] = {0};
-volatile unsigned char mBusy = 0;
-volatile unsigned char mStatus = 0;
+volatile static unsigned char mIcStep = 0;
+volatile static unsigned char mTwiStep = 0;
+volatile static unsigned char mAddresses[6] = {0};
+volatile static unsigned char mBusy = 0;
+volatile static unsigned char mStatus = 0;
 #endif
 
-volatile unsigned char mBytes[16] = {0};
+volatile static unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
+volatile static unsigned char mBytes[PWM_NUM_CHANNELS/8] = {0};
 
 
 //*****************
@@ -76,10 +79,15 @@ void SendData( unsigned char data );
 void SendStop( void );
 #endif
 
+#if defined( PWM_TWI_VERSION ) || defined( PWM_BLOCKING_VERSION )
+void PwmUpdateChannels( void );
+#endif
+
 #ifdef PWM_ISR_VERSION
 void InitiateTransfer( void );
 #endif
 
+void PwmUpdateBytes( void );
 
 //*****************
 // PUBLIC
@@ -174,7 +182,7 @@ void PwmInit( void )
     mAddresses[4] = IC5 << 1;
     mAddresses[5] = IC6 << 1;
 
-    // Enable and setup for interrupts
+    // Enable TWI and setup for interrupts
     TWCR = _BV( TWEN ) | _BV( TWIE );
 
     // Initialize for output pins
@@ -184,13 +192,76 @@ void PwmInit( void )
     }
     InitiateTransfer();
     while( mBusy );
+
+    // Start TIMER2 for interrupting every 1.25ms
+    TCCR2A = 0x02;
+    TCCR2B = 0x05;
+    TCNT2 = 0x00;
+    OCR2A = 156;
+    TIMSK2 = 0x02;
 #endif
 }
 
-void PwmUpdateChannels( unsigned char* channelValues )
+void PwmProcess( void )
 {
-    static byte mStepCount = 0;
-    static byte mThreshold = 0;
+#if defined( PWM_TWI_VERSION ) || defined( PWM_BLOCKING_VERSION )
+    static unsigned long mPwmTime = micros();
+    static unsigned long mCurrentTime = micros();
+
+    mCurrentTime = micros();
+    if( ( mCurrentTime - mPwmTime ) > PWM_UPDATE_TIME_US )
+    {
+        // Reset time for next update
+        mPwmTime = mCurrentTime;
+        // Update channel values
+        PwmUpdateChannels();
+    }
+#endif
+}
+
+void PwmSetChannels( unsigned char* channelValues )
+{
+    cli();
+    memcpy( (void*)mChannelValues, channelValues, PWM_NUM_CHANNELS );
+    sei();
+}
+
+//*****************
+// PRIVATE
+//*****************
+
+#ifdef PWM_BLOCKING_VERSION
+void SendStart( void )
+{
+    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendAddress( unsigned char address )
+{
+    TWDR = ( address << 1 );
+    TWCR = _BV( TWINT ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendData( unsigned char data )
+{
+    TWDR = data;
+    TWCR = _BV( TWINT ) | _BV( TWEN );
+    while( !( TWCR & _BV( TWINT ) ) );
+}
+
+void SendStop( void )
+{
+    TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN );
+    while( TWCR & _BV( TWSTO ) );
+}
+#endif
+
+void PwmUpdateBytes( void )
+{
+    static unsigned char mStepCount = 0;
+    static unsigned char mThreshold = 0;
 
     switch( mStepCount )
     {
@@ -213,23 +284,29 @@ void PwmUpdateChannels( unsigned char* channelValues )
     default: break;
     }
 
-    for( int i=0; i<16; i++ )
+    for( unsigned char i=0; i<(PWM_NUM_CHANNELS/8); i++ )
     {
         mBytes[i] = 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 0] > mThreshold ) ? ~0x01 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 1] > mThreshold ) ? ~0x02 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 2] > mThreshold ) ? ~0x04 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 3] > mThreshold ) ? ~0x08 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 4] > mThreshold ) ? ~0x10 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 5] > mThreshold ) ? ~0x20 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 6] > mThreshold ) ? ~0x40 : 0xFF;
-        mBytes[i] &= ( channelValues[i*8 + 7] > mThreshold ) ? ~0x80 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 0] > mThreshold ) ? ~0x01 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 1] > mThreshold ) ? ~0x02 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 2] > mThreshold ) ? ~0x04 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 3] > mThreshold ) ? ~0x08 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 4] > mThreshold ) ? ~0x10 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 5] > mThreshold ) ? ~0x20 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 6] > mThreshold ) ? ~0x40 : 0xFF;
+        mBytes[i] &= ( mChannelValues[i*8 + 7] > mThreshold ) ? ~0x80 : 0xFF;
     }
 
     if( ++mStepCount >= 16 )
     {
         mStepCount = 0;
     }
+}
+
+#if defined( PWM_TWI_VERSION ) || defined( PWM_BLOCKING_VERSION )
+void PwmUpdateChannels( void )
+{
+    PwmUpdateBytes();
 
 #ifdef PWM_TWI_VERSION
     mBuffer[0] = REG_GPIOA;
@@ -302,41 +379,6 @@ void PwmUpdateChannels( unsigned char* channelValues )
     SendData( mBytes[11] );
     SendStop();
 #endif
-
-#ifdef PWM_ISR_VERSION
-    InitiateTransfer();
-#endif
-}
-
-//*****************
-// PRIVATE
-//*****************
-
-#ifdef PWM_BLOCKING_VERSION
-void SendStart( void )
-{
-    TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN );
-    while( !( TWCR & _BV( TWINT ) ) );
-}
-
-void SendAddress( unsigned char address )
-{
-    TWDR = ( address << 1 );
-    TWCR = _BV( TWINT ) | _BV( TWEN );
-    while( !( TWCR & _BV( TWINT ) ) );
-}
-
-void SendData( unsigned char data )
-{
-    TWDR = data;
-    TWCR = _BV( TWINT ) | _BV( TWEN );
-    while( !( TWCR & _BV( TWINT ) ) );
-}
-
-void SendStop( void )
-{
-    TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN );
-    while( TWCR & _BV( TWSTO ) );
 }
 #endif
 
@@ -345,6 +387,12 @@ void InitiateTransfer( void )
 {
     mBusy = 1;
     TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
+}
+
+ISR( TIMER2_COMPA_vect )
+{
+    PwmUpdateBytes();
+    InitiateTransfer();
 }
 
 ISR( TWI_vect )
