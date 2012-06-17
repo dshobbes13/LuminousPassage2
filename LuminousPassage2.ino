@@ -19,11 +19,6 @@ void setup( void )
 {
     //delay( 2000 );
 
-    // Set A/D prescale to 16
-    sbi( ADCSRA, ADPS2 );
-    cbi( ADCSRA, ADPS1 );
-    cbi( ADCSRA, ADPS0 );
-
     // Init serial port for debugging
     Serial.begin( 115200 );
     while( !Serial );
@@ -101,24 +96,27 @@ void loop( void )
     {
         mFftFourBuckets[ (i&0xF8)>>3 ] += mFftMag[i];
     }
-    /*
+
     for( unsigned char i=0; i<4; i++ )
     {
         if( mFftFourBuckets[i] > 0x10 )
         {
             mFftFourBuckets[i] = mFftFourBuckets[i] * 4;
         }
-        mChannelValues[i] = mFftFourBuckets[i];
+        else
+        {
+            mFftFourBuckets[i] = 0;
+        }
+        mChannelValues[i] = ( mFftFourBuckets[i] <= 0xFF ) ? mFftFourBuckets[i] : 0xFF;
     }
-    */
 
     static unsigned long mChannelSweepTime = millis();
     if( millis() - mChannelSweepTime > 10 )
     {
         mChannelSweepTime = millis();
-        for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+        for( unsigned char i=4; i<PWM_NUM_CHANNELS; i++ )
         {
-            mChannelValues[i]++;
+            //mChannelValues[i]++;
         }
         PwmSetChannels( mChannelValues );
     }

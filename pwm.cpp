@@ -105,12 +105,10 @@ void PwmInit( void )
     cbi( TWSR, TWPS0 );
     TWBR=12;
 
-#ifdef PWM_ISR_VERSION
-#ifdef DEBUG
+#if defined( PWM_ISR_VERSION ) && defined( DEBUG )
     // Debug
     DDRD = DDRD | 0x04;
     PORTD = PORTD & ~0x04;
-#endif
 #endif
 
     digitalWrite( SDA, 1 );
@@ -391,8 +389,10 @@ void InitiateTransfer( void )
 
 ISR( TIMER2_COMPA_vect )
 {
+    PORTD = PORTD | 0x04;
     PwmUpdateBytes();
     InitiateTransfer();
+    PORTD = PORTD & ~0x04;
 }
 
 ISR( TWI_vect )
