@@ -17,7 +17,7 @@ unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
 
 void setup( void )
 {
-    //delay( 2000 );
+    delay( 1000 );
 
     // Init serial port for debugging
     Serial.begin( 115200 );
@@ -87,6 +87,7 @@ void loop( void )
         mDebugFftBlockCount++;
     }
 
+    /*
     // Update channel values
     mFftFourBuckets[0] = 0;
     mFftFourBuckets[1] = 0;
@@ -109,14 +110,34 @@ void loop( void )
         }
         mChannelValues[i] = ( mFftFourBuckets[i] <= 0xFF ) ? mFftFourBuckets[i] : 0xFF;
     }
+    */
 
     static unsigned long mChannelSweepTime = millis();
-    if( millis() - mChannelSweepTime > 10 )
+    static unsigned char mState = 1;
+    if( millis() - mChannelSweepTime > 20 )
     {
         mChannelSweepTime = millis();
-        for( unsigned char i=4; i<PWM_NUM_CHANNELS; i++ )
+        if( mState )
         {
-            //mChannelValues[i]++;
+            for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+            {
+                mChannelValues[i] += 0x08;
+            }
+            if( mChannelValues[0] > 0xF0 )
+            {
+                mState = 0;
+            }
+        }
+        else
+        {
+            for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+            {
+                mChannelValues[i] -= 0x08;
+            }
+            if( mChannelValues[0] < 0x10 )
+            {
+                mState = 1;
+            }
         }
         PwmSetChannels( mChannelValues );
     }
