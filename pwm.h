@@ -11,7 +11,7 @@
 //#define PWM_BLOCKING_VERSION
 #define PWM_ISR_VERSION
 
-#define PWM_NUM_CHANNELS    96
+#define PWM_NUM_CHANNELS    64
 
 //*****************
 // PUBLIC FUNCTIONS

@@ -114,7 +114,7 @@ void loop( void )
 
     static unsigned long mChannelSweepTime = millis();
     static unsigned char mState = 1;
-    if( millis() - mChannelSweepTime > 20 )
+    if( millis() - mChannelSweepTime > 500 )
     {
         mChannelSweepTime = millis();
         if( mState )
@@ -138,6 +138,10 @@ void loop( void )
             {
                 mState = 1;
             }
+        }
+        for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+        {
+            mChannelValues[i] = 0x08;
         }
         PwmSetChannels( mChannelValues );
     }

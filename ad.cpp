@@ -15,7 +15,7 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
 #define AD_SAMPLE_TIME_US   50
 #define AD_INPUT_PIN        0
@@ -145,7 +145,9 @@ void AdData( unsigned char* data )
 #ifdef AD_ISR_VERSION
 ISR( ADC_vect )
 {
+#ifdef DEBUG
     PORTD = PORTD | 0x04;
+#endif
     // Clear Timer1 flag
     sbi( TIFR1, OCF1B );
     // Get AD value
@@ -156,7 +158,9 @@ ISR( ADC_vect )
         mAdSampleArray = mAdSampleArray ? 0 : 1;
         mAdReady = 1;
     }
+#ifdef DEBUG
     PORTD = PORTD & ~0x04;
+#endif
 }
 #endif
 

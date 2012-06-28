@@ -27,18 +27,24 @@
 #define IC2 0x21
 #define IC3 0x22
 #define IC4 0x23
+/*
 #define IC5 0x20
 #define IC6 0x21
 #define IC7 0x22
 #define IC8 0x23
+*/
+#define PWM_NUM_IC      ( PWM_NUM_CHANNELS / 16 )
+#define PWM_NUM_BYTES   ( PWM_NUM_CHANNELS / 8 )
+
+#define PWM_NUM_THRESH  32
 
 #define REG_IODIRA 0x00
 #define REG_IDDIRB 0x01
 #define REG_GPIOA  0x12
 #define REG_GPIOB  0x13
 
-#define TWSR_STATUS_START   0x08
-#define TWSR_STATUS_RSTART  0x10
+#define TWSR_STATUS_START       0x08
+#define TWSR_STATUS_RSTART      0x10
 #define TWSR_STATUS_SLAW_ACK    0x18
 #define TWSR_STATUS_SLAW_NACK   0x20
 #define TWSR_STATUS_DATA_ACK    0x28
@@ -59,14 +65,72 @@ unsigned static char mBuffer[3];
 #ifdef PWM_ISR_VERSION
 volatile static unsigned char mIcStep = 0;
 volatile static unsigned char mTwiStep = 0;
-volatile static unsigned char mAddresses[6] = {0};
+volatile static unsigned char mAddresses[PWM_NUM_IC] = {0};
+volatile static unsigned char mRegister = 0;
 volatile static unsigned char mBusy = 0;
 volatile static unsigned char mStatus = 0;
 #endif
 
 volatile static unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
-volatile static unsigned char mBytes[PWM_NUM_CHANNELS/8] = {0};
+volatile static unsigned char mBytes[PWM_NUM_BYTES] = {0};
 
+/*
+volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
+{
+    0x0F,
+    0x1E,
+    0x2D,
+    0x3C,
+    0x4B,
+    0x5A,
+    0x69,
+    0x78,
+    0x87,
+    0x96,
+    0xA5,
+    0xB4,
+    0xC3,
+    0xD2,
+    0xE1,
+    0xF0,
+};
+*/
+
+volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
+{
+    0x07,
+    0x0F,
+    0x17,
+    0x1E,
+    0x26,
+    0x2E,
+    0x36,
+    0x3C,
+    0x45,
+    0x4C,
+    0x55,
+    0x5B,
+    0x64,
+    0x6B,
+    0x74,
+    0x7A,
+    0x83,
+    0x8A,
+    0x93,
+    0x99,
+    0xA2,
+    0xA9,
+    0xB2,
+    0xB8,
+    0xC1,
+    0xC8,
+    0xD1,
+    0xD7,
+    0xE0,
+    0xE7,
+    0xF0,
+    0xF7,
+};
 
 //*****************
 // PRIVATE PROTOTYPES
@@ -123,8 +187,8 @@ void PwmInit( void )
     twi_writeTo( IC2, mBuffer, 3, false, true );
     twi_writeTo( IC3, mBuffer, 3, false, true );
     twi_writeTo( IC4, mBuffer, 3, false, true );
-    twi_writeTo( IC5, mBuffer, 3, false, true );
-    twi_writeTo( IC6, mBuffer, 3, false, true );
+    //twi_writeTo( IC5, mBuffer, 3, false, true );
+    //twi_writeTo( IC6, mBuffer, 3, false, true );
 #endif
 
 #ifdef PWM_BLOCKING_VERSION
@@ -155,7 +219,7 @@ void PwmInit( void )
     SendData( 0x00 );
     SendData( 0x00 );
     SendStop();
-
+/*
     SendStart();
     SendAddress( IC5 );
     SendData( REG_IODIRA );
@@ -169,6 +233,7 @@ void PwmInit( void )
     SendData( 0x00 );
     SendData( 0x00 );
     SendStop();
+*/
 #endif
 
 #ifdef PWM_ISR_VERSION
@@ -177,26 +242,40 @@ void PwmInit( void )
     mAddresses[1] = IC2 << 1;
     mAddresses[2] = IC3 << 1;
     mAddresses[3] = IC4 << 1;
-    mAddresses[4] = IC5 << 1;
-    mAddresses[5] = IC6 << 1;
+    //mAddresses[4] = IC5 << 1;
+    //mAddresses[5] = IC6 << 1;
 
     // Enable TWI and setup for interrupts
     TWCR = _BV( TWEN ) | _BV( TWIE );
 
     // Initialize for output pins
-    for( unsigned char i=0; i<16; i++ )
+    for( unsigned char i=0; i<PWM_NUM_BYTES; i++ )
     {
         mBytes[i] = 0x00;
     }
+    mRegister = REG_IODIRA;
     InitiateTransfer();
     while( mBusy );
+    mRegister = REG_GPIOA;
 
-    // Start TIMER2 for interrupting every 1.25ms
+    // Start TIMER2 for interrupting at 50Hz * ( number of brightness values )
+
+    // 1.25ms for 16 brightness values
+    /*
     TCCR2A = 0x02;
     TCCR2B = 0x05;
     TCNT2 = 0x00;
     OCR2A = 156;
     TIMSK2 = 0x02;
+    */
+
+    // .625ms for 32 brightness values
+    TCCR2A = 0x02;
+    TCCR2B = 0x04;
+    TCNT2 = 0x00;
+    OCR2A = 156;
+    TIMSK2 = 0x02;
+
 #endif
 }
 
@@ -261,41 +340,94 @@ void PwmUpdateBytes( void )
     static unsigned char mStepCount = 0;
     static unsigned char mThreshold = 0;
 
-    switch( mStepCount )
-    {
-    case 0x00: mThreshold = 0x0F; break;
-    case 0x01: mThreshold = 0x1E; break;
-    case 0x02: mThreshold = 0x2D; break;
-    case 0x03: mThreshold = 0x3C; break;
-    case 0x04: mThreshold = 0x4B; break;
-    case 0x05: mThreshold = 0x5A; break;
-    case 0x06: mThreshold = 0x69; break;
-    case 0x07: mThreshold = 0x78; break;
-    case 0x08: mThreshold = 0x87; break;
-    case 0x09: mThreshold = 0x96; break;
-    case 0x0A: mThreshold = 0xA5; break;
-    case 0x0B: mThreshold = 0xB4; break;
-    case 0x0C: mThreshold = 0xC3; break;
-    case 0x0D: mThreshold = 0xD2; break;
-    case 0x0E: mThreshold = 0xE1; break;
-    case 0x0F: mThreshold = 0xF0; break;
-    default: break;
-    }
+    // Get current threshold
+    mThreshold = mThresholdMap[mStepCount];
 
-    for( unsigned char i=0; i<(PWM_NUM_CHANNELS/8); i++ )
-    {
-        mBytes[i] = 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 0] > mThreshold ) ? ~0x01 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 1] > mThreshold ) ? ~0x02 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 2] > mThreshold ) ? ~0x04 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 3] > mThreshold ) ? ~0x08 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 4] > mThreshold ) ? ~0x10 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 5] > mThreshold ) ? ~0x20 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 6] > mThreshold ) ? ~0x40 : 0xFF;
-        mBytes[i] &= ( mChannelValues[i*8 + 7] > mThreshold ) ? ~0x80 : 0xFF;
-    }
+    // IC1
+    mBytes[0] = 0xFF;
+    mBytes[0] &= ( mChannelValues[0x00] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x01] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x02] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x03] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x04] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x05] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x06] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[0] &= ( mChannelValues[0x07] > mThreshold ) ? ~0x80 : 0xFF;
 
-    if( ++mStepCount >= 16 )
+    mBytes[1] = 0xFF;
+    mBytes[1] &= ( mChannelValues[0x08] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x09] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0A] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0B] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0C] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0D] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0E] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[1] &= ( mChannelValues[0x0F] > mThreshold ) ? ~0x80 : 0xFF;
+
+    // IC2
+    mBytes[2] = 0xFF;
+    mBytes[2] &= ( mChannelValues[0x10] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x11] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x12] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x13] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x14] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x15] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x16] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[2] &= ( mChannelValues[0x17] > mThreshold ) ? ~0x80 : 0xFF;
+
+    mBytes[3] = 0xFF;
+    mBytes[3] &= ( mChannelValues[0x18] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x19] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1A] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1B] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1C] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1D] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1E] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[3] &= ( mChannelValues[0x1F] > mThreshold ) ? ~0x80 : 0xFF;
+
+    // IC3
+    mBytes[4] = 0xFF;
+    mBytes[4] &= ( mChannelValues[0x20] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x21] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x22] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x23] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x24] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x25] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x26] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[4] &= ( mChannelValues[0x27] > mThreshold ) ? ~0x80 : 0xFF;
+
+    mBytes[5] = 0xFF;
+    mBytes[5] &= ( mChannelValues[0x28] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x29] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2A] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2B] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2C] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2D] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2E] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[5] &= ( mChannelValues[0x2F] > mThreshold ) ? ~0x80 : 0xFF;
+
+    // IC4
+    mBytes[6] = 0xFF;
+    mBytes[6] &= ( mChannelValues[0x30] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x31] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x32] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x33] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x34] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x35] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x36] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[6] &= ( mChannelValues[0x37] > mThreshold ) ? ~0x80 : 0xFF;
+
+    mBytes[7] = 0xFF;
+    mBytes[7] &= ( mChannelValues[0x38] > mThreshold ) ? ~0x01 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x39] > mThreshold ) ? ~0x02 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3A] > mThreshold ) ? ~0x04 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3B] > mThreshold ) ? ~0x08 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3C] > mThreshold ) ? ~0x10 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3D] > mThreshold ) ? ~0x20 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3E] > mThreshold ) ? ~0x40 : 0xFF;
+    mBytes[7] &= ( mChannelValues[0x3F] > mThreshold ) ? ~0x80 : 0xFF;
+
+    if( ++mStepCount >= PWM_NUM_THRESH )
     {
         mStepCount = 0;
     }
@@ -324,7 +456,7 @@ void PwmUpdateChannels( void )
     mBuffer[1] = mBytes[6];
     mBuffer[2] = mBytes[7];
     twi_writeTo( IC4, mBuffer, 3, false, true );
-
+/*
     mBuffer[1] = mBytes[8];
     mBuffer[2] = mBytes[9];
     twi_writeTo( IC5, mBuffer, 3, false, true );
@@ -332,6 +464,7 @@ void PwmUpdateChannels( void )
     mBuffer[1] = mBytes[10];
     mBuffer[2] = mBytes[11];
     twi_writeTo( IC6, mBuffer, 3, false, true );
+*/
 #endif
 
 #ifdef PWM_BLOCKING_VERSION
@@ -362,7 +495,7 @@ void PwmUpdateChannels( void )
     SendData( mBytes[6] );
     SendData( mBytes[7] );
     SendStop();
-
+/*
     SendStart();
     SendAddress( IC5 );
     SendData( REG_GPIOA );
@@ -376,6 +509,7 @@ void PwmUpdateChannels( void )
     SendData( mBytes[10] );
     SendData( mBytes[11] );
     SendStop();
+*/
 #endif
 }
 #endif
@@ -397,7 +531,9 @@ ISR( TIMER2_COMPA_vect )
 
 ISR( TWI_vect )
 {
+#ifdef DEBUG
     PORTD = PORTD | 0x04;
+#endif
     switch( mTwiStep )
     {
     case 0:
@@ -408,7 +544,7 @@ ISR( TWI_vect )
         break;
     case 1:
         // Send register
-        TWDR = (unsigned char)REG_GPIOA;
+        TWDR = (unsigned char)mRegister;
         TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
         mTwiStep++;
         break;
@@ -430,7 +566,7 @@ ISR( TWI_vect )
         while( TWCR & _BV( TWSTO ) );
         mTwiStep = 0;
         // Check if next ic
-        if( ++mIcStep < 6 )
+        if( ++mIcStep < PWM_NUM_IC )
         {
             // Send next start
             TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
@@ -446,7 +582,9 @@ ISR( TWI_vect )
         TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
         break;
     }
+#ifdef DEBUG
     PORTD = PORTD & ~0x04;
+#endif
 }
 #endif
 
