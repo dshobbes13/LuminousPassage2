@@ -29,6 +29,7 @@
 // PUBLIC
 //*****************
 
+
 void Magnitude( unsigned int* mag, char* real, char* imag, unsigned char n )
 {
     for( unsigned int i=0; i<n; i++ )

@@ -24,7 +24,7 @@
 // VARIABLES
 //*****************
 
-volatile static unsigned char mAdData[2][AD_NUM_SAMPLES] = {0};
+volatile static unsigned char mAdData[2][AD_NUM_SAMPLES] = { {0}, {0} };
 volatile static unsigned char mAdSampleArray = 0;
 volatile static unsigned char mAdSampleNumber = 0;
 volatile static unsigned char mAdReady = 0;
@@ -78,8 +78,8 @@ void AdInit( void )
 
 #if defined( AD_ISR_VERSION ) && defined( DEBUG )
     // Debug
-    DDRD = DDRD | 0x04;
-    PORTD = PORTD & ~0x04;
+    DDRD = DDRD | 0x80;
+    PORTD = PORTD & ~0x80;
 #endif
 
 }
@@ -146,7 +146,7 @@ void AdData( unsigned char* data )
 ISR( ADC_vect )
 {
 #ifdef DEBUG
-    PORTD = PORTD | 0x04;
+    PORTD = PORTD | 0x80;
 #endif
     // Clear Timer1 flag
     sbi( TIFR1, OCF1B );
@@ -159,7 +159,7 @@ ISR( ADC_vect )
         mAdReady = 1;
     }
 #ifdef DEBUG
-    PORTD = PORTD & ~0x04;
+    PORTD = PORTD & ~0x80;
 #endif
 }
 #endif

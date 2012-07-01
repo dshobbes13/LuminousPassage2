@@ -38,7 +38,7 @@
 #include "pins_arduino.h"
 #include "twi.h"
 
-#include "pwm.h"
+#include "pwmCentipede.h"
 
 static volatile uint8_t twi_state;
 static volatile uint8_t twi_slarw;

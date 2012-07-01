@@ -1,19 +1,36 @@
 
 
 #include "fft.h"
-#include "pwm.h"
+#include "pwmCentipede.h"
+#include "pwmZeroCrossing.h"
 #include "utility.h"
 #include "ad.h"
 #include "testFft.h"
 
-#define DEBUG 1
+//#define DEBUG
 
+//#define CENTIPEDE
+#define ZERO_CROSSING
+
+//#define AUTO_SWEEP
+
+#if defined( CENTIPEDE )
+    #define PWM_NUM_CHANNELS    PWM_CENTIPEDE_NUM_CHANNELS
+#elif defined( ZERO_CROSSING )
+    #define PWM_NUM_CHANNELS    PWM_ZERO_CROSSING_NUM_CHANNELS
+#else
+    #define PWM_NUM_CHANNELS    0
+#endif
 
 char mFftDataReal[AD_NUM_SAMPLES];
 char mFftDataImag[AD_NUM_SAMPLES];
 unsigned int mFftMag[AD_NUM_SAMPLES];
 
 unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
+
+void test( void )
+{
+}
 
 void setup( void )
 {
@@ -25,7 +42,11 @@ void setup( void )
 
     // Init modules
     AdInit();
-    PwmInit();
+#if defined( CENTIPEDE )
+    PwmCentipedeInit();
+#elif defined( ZERO_CROSSING )
+    PwmZeroCrossingInit();
+#endif
 
     //TestFft();
 }
@@ -33,7 +54,7 @@ void setup( void )
 void loop( void )
 {
     static unsigned long mDebugMeasureTime = 0;
-    
+
     static unsigned long mDebugAdBlockTime = 0;
     static unsigned long mDebugAdBlockCount = 0;
     
@@ -114,16 +135,18 @@ void loop( void )
 
     static unsigned long mChannelSweepTime = millis();
     static unsigned char mState = 1;
-    if( millis() - mChannelSweepTime > 500 )
+#ifdef AUTO_SWEEP
+    if( millis() - mChannelSweepTime > 20 )
     {
         mChannelSweepTime = millis();
         if( mState )
         {
+        
             for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
             {
                 mChannelValues[i] += 0x08;
             }
-            if( mChannelValues[0] > 0xF0 )
+            if( mChannelValues[0] > 0xF7 )
             {
                 mState = 0;
             }
@@ -134,20 +157,54 @@ void loop( void )
             {
                 mChannelValues[i] -= 0x08;
             }
-            if( mChannelValues[0] < 0x10 )
+            if( mChannelValues[0] < 0x07 )
             {
                 mState = 1;
             }
         }
+#else
+    if( Serial.available() )
+    {
+        unsigned int byte = Serial.read();
+        if( byte == 'u' )
+        {
+            for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+            {
+                mChannelValues[i] += 0x08;
+            }
+        }
+        else if( byte == 'd' )
+        {
+            for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
+            {
+                mChannelValues[i] -= 0x08;
+            }
+        }
+        else
+        {
+        }
+#endif
+        /*
         for( unsigned char i=0; i<PWM_NUM_CHANNELS; i++ )
         {
-            mChannelValues[i] = 0x08;
+            mChannelValues[i] = 0x11;
         }
-        PwmSetChannels( mChannelValues );
-    }
-    PwmProcess();
+        */
 
-#if DEBUG
+#if defined( CENTIPEDE )
+        PwmCentipedeSetChannels( mChannelValues );
+#elif defined( ZERO_CROSSING )
+        PwmZeroCrossingSetChannels( mChannelValues );
+#endif
+    }
+
+#if defined( CENTIPEDE )
+    PwmCentipedeProcess();
+#elif defined( ZERO_CROSSING )
+    PwmZeroCrossingProcess();
+#endif
+
+#ifdef DEBUG
     static unsigned long mDebugPrintTime = millis();
     if( ( millis() - mDebugPrintTime ) > 1000 )
     {
