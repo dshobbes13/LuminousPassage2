@@ -11,7 +11,17 @@
 #define sbi( sfr, bit ) ( _SFR_BYTE( sfr ) |= _BV( bit ) )
 #endif
 
+void DebugInit( void );
+
+void DebugUp( void );
+
+void DebugDown( void );
+
 void Magnitude( unsigned int* mag, char* real, char* imag, unsigned char n );
+
+unsigned char Sin( unsigned char index );
+
+unsigned char Cos( unsigned char index );
 
 void PrintDataChar( const char* label, char* data, unsigned char n );
 

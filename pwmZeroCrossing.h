@@ -7,7 +7,7 @@
 // DEFINITIONS
 //*****************
 
-#define PWM_ZERO_CROSSING_NUM_CHANNELS    8
+#define PWM_ZERO_CROSSING_NUM_CHANNELS    10
 
 //*****************
 // PUBLIC FUNCTIONS

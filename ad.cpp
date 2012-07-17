@@ -15,7 +15,7 @@
 // DEFINITIONS
 //*****************
 
-//#define DEBUG
+#define DEBUG
 
 #define AD_SAMPLE_TIME_US   50
 #define AD_INPUT_PIN        0
@@ -42,12 +42,21 @@ volatile static unsigned char mAdReady = 0;
 void AdInit( void )
 {
     // Configure AD system
+    /*
+    cbi( ADMUX, REFS1 );    // Use AREF
+    cbi( ADMUX, REFS0 );
+    */
+    cbi( ADMUX, REFS1 );    // Use Internal AVcc
+    sbi( ADMUX, REFS0 );
     sbi( ADMUX, ADLAR );    // Left justified
     sbi( ADCSRA, ADEN );    // Turn AD on
-    sbi( ADCSRA, ADPS2 );   // Set pre-scale to 16
+    sbi( ADCSRA, ADPS2 );   // Set pre-scale to 32 (500kHz AD Clock, 200kHz max for max resolution)
     cbi( ADCSRA, ADPS1 );
-    cbi( ADCSRA, ADPS0 );
+    sbi( ADCSRA, ADPS0 );
     sbi( ADCSRA, ADIF );    // Clear interrupt flag
+
+    // Select AD input
+    sbi( ADMUX, MUX0 );
 
 #ifdef AD_ISR_VERSION
     sbi( ADCSRA, ADATE );   // Put AD in free-running mode
@@ -61,25 +70,23 @@ void AdInit( void )
     TCCR1C = 0x00;
     TCNT1H = 0x00;
     TCNT1L = 0x00;
+
+    // 20kHz sampling
     OCR1AH = 0x03;
     OCR1AL = 0x20;
     OCR1BH = 0x03;
     OCR1BL = 0x20;
+
     ICR1H = 0x00;
     ICR1L = 0x00;
-
-    Serial.print( "\n\r" );
-    // Initialize variables
 
     // Start sampling
     sbi( ADCSRA, ADSC );
     sbi( ADCSRA, ADIE );
 #endif
 
-#if defined( AD_ISR_VERSION ) && defined( DEBUG )
-    // Debug
-    DDRD = DDRD | 0x80;
-    PORTD = PORTD & ~0x80;
+#ifdef DEBUG
+    DebugInit();
 #endif
 
 }
@@ -97,9 +104,15 @@ void AdProcess( void )
         // Reset time for next sample
         mAdTime = mCurrentTime;
 
+#ifdef DEBUG
+        DebugUp();
+#endif
         // Sample A/D
         sbi( ADCSRA, ADSC );
         while( !( ADCSRA & ( 0x01 << ADIF ) ) );
+#ifdef DEBUG
+        DebugDown();
+#endif
         mAdSample = ADCH;
         mAdData[0][mAdSampleNumber] = mAdSample;
 
@@ -146,7 +159,7 @@ void AdData( unsigned char* data )
 ISR( ADC_vect )
 {
 #ifdef DEBUG
-    PORTD = PORTD | 0x80;
+    DebugUp();
 #endif
     // Clear Timer1 flag
     sbi( TIFR1, OCF1B );
@@ -159,7 +172,7 @@ ISR( ADC_vect )
         mAdReady = 1;
     }
 #ifdef DEBUG
-    PORTD = PORTD & ~0x80;
+    DebugDown();
 #endif
 }
 #endif

@@ -19,7 +19,7 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
 #define PWM_UPDATE_TIME_US  1250
 
@@ -170,9 +170,7 @@ void PwmCentipedeInit( void )
     TWBR=12;
 
 #if defined( PWM_CENTIPEDE_ISR_VERSION ) && defined( DEBUG )
-    // Debug
-    DDRD = DDRD | 0x80;
-    PORTD = PORTD & ~0x80;
+    DebugInit();
 #endif
 
     digitalWrite( SDA, 1 );
@@ -524,19 +522,19 @@ void InitiateTransfer( void )
 ISR( TIMER2_COMPA_vect )
 {
 #ifdef DEBUG
-    PORTD = PORTD | 0x80;
+    DebugUp();
 #endif
     PwmUpdateBytes();
     InitiateTransfer();
 #ifdef DEBUG
-    PORTD = PORTD & ~0x80;
+    DebugDown();
 #endif
 }
 
 ISR( TWI_vect )
 {
 #ifdef DEBUG
-    PORTD = PORTD | 0x80;
+    DebugUp();
 #endif
     switch( mTwiStep )
     {
@@ -587,7 +585,7 @@ ISR( TWI_vect )
         break;
     }
 #ifdef DEBUG
-    PORTD = PORTD & ~0x80;
+    DebugDown();
 #endif
 }
 #endif
