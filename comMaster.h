@@ -1,26 +1,26 @@
-// File: pwmCentipede.h
+// File: comMaster.h
 
-#ifndef PWM_CENTIPEDE_H
-#define PWM_CENTIPEDE_H
+#ifndef COM_MASTER_H
+#define COM_MASTER_H
 
 //*****************
 // DEFINITIONS
 //*****************
 
-//#define PWM_CENTIPEDE_TWI_VERSION
-//#define PWM_CENTIPEDE_BLOCKING_VERSION
-#define PWM_CENTIPEDE_ISR_VERSION
+//#define COM_MASTER_TWI_VERSION
+//#define COM_MASTER_BLOCKING_VERSION
+#define COM_MASTER_ISR_VERSION
 
-#define PWM_CENTIPEDE_NUM_CHANNELS    64
+#define COM_MASTER_NUM_BYTES    59
 
 //*****************
 // PUBLIC FUNCTIONS
 //*****************
 
-void PwmCentipedeInit( void );
+void ComMasterInit( void );
 
-void PwmCentipedeProcess( void );
+void ComMasterProcess( void );
 
-void PwmCentipedeSetChannels( unsigned char* channelValues );
+void ComMasterSendBytes( unsigned char* bytes );
 
 #endif

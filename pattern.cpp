@@ -17,9 +17,6 @@
 
 //#define DEBUG
 
-//#define AUTO_SWEEP
-//#define CONTROL_SWEEP
-
 enum eMode
 {
     Mode_NULL            = 0,
@@ -40,6 +37,19 @@ enum eMode
 //*****************
 
 static unsigned char mPatternChannels[PATTERN_NUM_CHANNELS];
+
+static unsigned char mChannelMap[PATTERN_NUM_CHANNELS] = {
+    4, // 0
+    1, // 1
+    5, // 2
+    0, // 3
+    6, // 4
+    2, // 5
+    7, // 6
+    3, // 7
+    8, // 8
+    9, // 9
+};
 
 static unsigned char mNewRaw = 0;
 static unsigned char mRawMean = 128;
@@ -107,7 +117,7 @@ unsigned char PatternProcess( void )
     // Process mode commands
     if( mCommandReceived )
     {
-        if( ( mCommand >= '0' ) && ( mCommand <= '9' ) || mCommand == 'z')
+        if( ( ( mCommand >= '0' ) && ( mCommand <= '9' ) ) || ( mCommand == 'z') )
         {
             mCommandReceived = 0;
             switch( mCommand )

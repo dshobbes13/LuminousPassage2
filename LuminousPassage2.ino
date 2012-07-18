@@ -7,8 +7,8 @@
 #include "ad.h"
 #include "fft.h"
 #include "pattern.h"
-#include "pwmCentipede.h"
-#include "pwmZeroCrossing.h"
+#include "pwm.h"
+#include "comMaster.h"
 #include "testFft.h"
 #include "utility.h"
 
@@ -18,16 +18,6 @@
 
 #define DEBUG
 
-//#define CENTIPEDE
-#define ZERO_CROSSING
-
-#if defined( CENTIPEDE )
-    #define PWM_NUM_CHANNELS    PWM_CENTIPEDE_NUM_CHANNELS
-#elif defined( ZERO_CROSSING )
-    #define PWM_NUM_CHANNELS    PWM_ZERO_CROSSING_NUM_CHANNELS
-#else
-    #define PWM_NUM_CHANNELS    0
-#endif
 
 //*****************
 // VARIABLES
@@ -63,13 +53,9 @@ void setup( void )
 
     // Init modules
     AdInit();
-
     PatternInit();
-#if defined( CENTIPEDE )
-    PwmCentipedeInit();
-#elif defined( ZERO_CROSSING )
-    PwmZeroCrossingInit();
-#endif
+    PwmInit();
+    ComMasterInit();
 
     //TestFft();
 }
@@ -131,18 +117,9 @@ void loop( void )
     if( mUpdatePwm )
     {
         mUpdatePwm = 0;
-#if defined( CENTIPEDE )
-        PwmCentipedeSetChannels( mPwmValues );
-#elif defined( ZERO_CROSSING )
-        PwmZeroCrossingSetChannels( mPwmValues );
-#endif
+        PwmSetChannels( mPwmValues );
     }
-
-#if defined( CENTIPEDE )
-    PwmCentipedeProcess();
-#elif defined( ZERO_CROSSING )
-    PwmZeroCrossingProcess();
-#endif
+    PwmProcess();
 
 #ifdef DEBUG
     static unsigned long mDebugPrintTime = millis();

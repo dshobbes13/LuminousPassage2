@@ -1,10 +1,10 @@
-// File: pwmZeroCrossing.cpp
+// File: pwm.cpp
 
 //*****************
 // INCLUDES
 //*****************
 
-#include "pwmZeroCrossing.h"
+#include "pwm.h"
 
 #include <Arduino.h>
 
@@ -37,7 +37,7 @@
 //*****************
 
 
-volatile static unsigned char mChannelValues[PWM_ZERO_CROSSING_NUM_CHANNELS] = {0};
+volatile static unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
 
 #if defined( THRESH_16 )
 volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
@@ -140,7 +140,7 @@ volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
 // PUBLIC
 //*****************
 
-void PwmZeroCrossingInit( void )
+void PwmInit( void )
 {
 
 #ifdef DEBUG
@@ -162,14 +162,14 @@ void PwmZeroCrossingInit( void )
     EIMSK = 0x01;
 }
 
-void PwmZeroCrossingProcess( void )
+void PwmProcess( void )
 {
 }
 
-void PwmZeroCrossingSetChannels( unsigned char* channelValues )
+void PwmSetChannels( unsigned char* channelValues )
 {
     cli();
-    memcpy( (void*)mChannelValues, channelValues, PWM_ZERO_CROSSING_NUM_CHANNELS );
+    memcpy( (void*)mChannelValues, channelValues, PWM_NUM_CHANNELS );
     sei();
 }
 

@@ -38,7 +38,7 @@
 #include "pins_arduino.h"
 #include "twi.h"
 
-#include "pwmCentipede.h"
+#include "comMaster.h"
 
 static volatile uint8_t twi_state;
 static volatile uint8_t twi_slarw;
@@ -362,7 +362,7 @@ void twi_releaseBus(void)
   twi_state = TWI_READY;
 }
 
-#ifdef PWM_TWI_VERSION
+#ifdef COM_MASTER_TWI_VERSION
 SIGNAL(TWI_vect)
 {
   switch(TW_STATUS){

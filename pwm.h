@@ -1,22 +1,22 @@
-// File: pwmZeroCrossing.h
+// File: pwm.h
 
-#ifndef PWM_ZERO_CROSSING_H
-#define PWM_ZERO_CROSSING_H
+#ifndef PWM_H
+#define PWM_H
 
 //*****************
 // DEFINITIONS
 //*****************
 
-#define PWM_ZERO_CROSSING_NUM_CHANNELS    10
+#define PWM_NUM_CHANNELS    10
 
 //*****************
 // PUBLIC FUNCTIONS
 //*****************
 
-void PwmZeroCrossingInit( void );
+void PwmInit( void );
 
-void PwmZeroCrossingProcess( void );
+void PwmProcess( void );
 
-void PwmZeroCrossingSetChannels( unsigned char* channelValues );
+void PwmSetChannels( unsigned char* channelValues );
 
 #endif
