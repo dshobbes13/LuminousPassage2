@@ -83,11 +83,11 @@ void ComMasterInit( void )
     digitalWrite( SDA, 1 );
     digitalWrite( SCL, 1 );
 
-#ifdef PWM_CENTIPEDE_TWI_VERSION
+#ifdef COM_MASTER_TWI_VERSION
     twi_writeTo( 0x00, mBytes, COM_MASTER_NUM_BYTES, false, true );
 #endif
 
-#ifdef PWM_CENTIPEDE_BLOCKING_VERSION
+#ifdef COM_MASTER_BLOCKING_VERSION
     SendStart();
     SendAddress( 0x00 );
     for( unsigned char i=0; i<COM_MASTER_NUM_BYTES; i++ )
@@ -97,7 +97,7 @@ void ComMasterInit( void )
     SendStop();
 #endif
 
-#ifdef PWM_CENTIPEDE_ISR_VERSION
+#ifdef COM_MASTER_ISR_VERSION
     // Enable TWI and setup for interrupts
     TWCR = _BV( TWEN ) | _BV( TWIE );
 
@@ -116,11 +116,11 @@ void ComMasterSendBytes( unsigned char* bytes )
     memcpy( (void*)mBytes, bytes, COM_MASTER_NUM_BYTES );
     sei();
 
-#ifdef PWM_CENTIPEDE_TWI_VERSION
+#ifdef COM_MASTER_TWI_VERSION
     twi_writeTo( 0x00, mBytes, COM_MASTER_NUM_BYTES, false, true );
 #endif
 
-#ifdef PWM_CENTIPEDE_BLOCKING_VERSION
+#ifdef COM_MASTER_BLOCKING_VERSION
     SendStart();
     SendAddress( 0x00 );
     for( unsigned char i=0; i<COM_MASTER_NUM_BYTES; i++ )

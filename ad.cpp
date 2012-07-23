@@ -15,9 +15,9 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
-#define AD_SAMPLE_TIME_US   50
+#define AD_SAMPLE_TIME_US   100
 #define AD_INPUT_PIN        0
 
 //*****************
@@ -71,11 +71,27 @@ void AdInit( void )
     TCNT1H = 0x00;
     TCNT1L = 0x00;
 
+    /*
     // 20kHz sampling
     OCR1AH = 0x03;
     OCR1AL = 0x20;
     OCR1BH = 0x03;
     OCR1BL = 0x20;
+    */
+
+    /*
+    // 10kHz sampling
+    OCR1AH = 0x06;
+    OCR1AL = 0x40;
+    OCR1BH = 0x06;
+    OCR1BL = 0x40;
+    */
+
+    // 7680 Hz sampling
+    OCR1AH = 0x08;
+    OCR1AL = 0x23;
+    OCR1BH = 0x08;
+    OCR1BL = 0x23;
 
     ICR1H = 0x00;
     ICR1L = 0x00;
@@ -129,12 +145,7 @@ void AdProcess( void )
 
 unsigned char AdReady( void )
 {
-    if( mAdReady )
-    {
-        mAdReady = 0;
-        return 1;
-    }
-    return 0;
+    return mAdReady;
 }
 
 void AdData( unsigned char* data )
@@ -153,6 +164,8 @@ void AdData( unsigned char* data )
         memcpy( data, (void*)&mAdData[1], AD_NUM_SAMPLES );
     }
 #endif
+
+    mAdReady = 0;
 }
 
 #ifdef AD_ISR_VERSION

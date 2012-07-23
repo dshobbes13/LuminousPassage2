@@ -15,11 +15,12 @@
 // DEFINITIONS
 //*****************
 
-//#define DEBUG
+#define DEBUG
 
 //#define THRESH_16
 #define THRESH_24
 //#define THRESH_32
+//#define THRESH_48
 
 #if defined( THRESH_16 )
     #define PWM_NUM_THRESH  16
@@ -27,6 +28,8 @@
     #define PWM_NUM_THRESH  24
 #elif defined( THRESH_32 )
     #define PWM_NUM_THRESH  32
+#elif defined( THRESH_48 )
+    #define PWM_NUM_THRESH  48
 #else
     #define PWM_NUM_THRESH  1
 #endif
@@ -62,8 +65,7 @@ volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
 #elif defined( THRESH_24 )
 volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
 {
-//    0x0A,
-    0x00,
+    0x0A,
     0x14,
     0x1F,
     0x29,
@@ -124,6 +126,58 @@ volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
     0xF0,
     0xF7,
 };
+#elif defined( THRESH_48 )
+volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
+{
+    0x05,
+    0x0A,
+    0x10,
+    0x15,
+    0x1A,
+    0x1F,
+    0x24,
+    0x2A,
+    0x2F,
+    0x34,
+    0x39,
+    0x3E,
+    0x44,
+    0x49,
+    0x4E,
+    0x53,
+    0x58,
+    0x5E,
+    0x63,
+    0x68,
+    0x6D,
+    0x72,
+    0x78,
+    0x7D,
+    0x82,
+    0x87,
+    0x8D,
+    0x92,
+    0x97,
+    0x9C,
+    0xA1,
+    0xA7,
+    0xAC,
+    0xB1,
+    0xB6,
+    0xBB,
+    0xC1,
+    0xC6,
+    0xCB,
+    0xD0,
+    0xD5,
+    0xDB,
+    0xE0,
+    0xE5,
+    0xEA,
+    0xEF,
+    0xF5,
+    0xFA,
+};
 #else
 volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
 {
@@ -181,11 +235,12 @@ ISR( INT0_vect )
 {
     static unsigned long lastTime = micros();
     // Debounce for noise
-    if( ( micros() - lastTime ) < 425 )
+    if( ( micros() - lastTime ) < 100 )
     {
         return;
     }
     lastTime = micros();
+
 #ifdef DEBUG
     DebugUp();
 #endif

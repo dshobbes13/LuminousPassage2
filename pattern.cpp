@@ -84,6 +84,11 @@ static unsigned long mDigitalPatternTime = 0;
 
 static unsigned char mCycleCount = 0;
 
+static unsigned char mUpdatedChannels = 0;
+static unsigned char mCommandReceived = 0;
+static unsigned int mCommand = 0;
+static eMode mMode = Mode_NULL;
+
 //*****************
 // PRIVATE PROTOTYPES
 //*****************
@@ -98,14 +103,15 @@ unsigned char Abs( unsigned char value );
 
 void PatternInit( void )
 {
+    for( unsigned char i=0; i<PATTERN_NUM_CHANNELS; i++ )
+    {
+        mPatternChannels[i] = 0x0A;
+    }
+    mUpdatedChannels = 1;
 }
 
 unsigned char PatternProcess( void )
 {
-    static unsigned char mUpdatedChannels = 0;
-    static unsigned char mCommandReceived = 0;
-    static unsigned int mCommand = 0;
-    static eMode mMode = Mode_NULL;
 
     // Check for any new commands
     if( Serial.available() )
@@ -288,28 +294,28 @@ unsigned char PatternProcess( void )
             mDigitalPatternTime = millis();
             mUpdatedChannels = 1;
 
-            mPatternChannels[4] = 0;
-            mPatternChannels[1] = 0;
-            mPatternChannels[5] = 0;
             mPatternChannels[0] = 0;
-            mPatternChannels[6] = 0;
+            mPatternChannels[1] = 0;
             mPatternChannels[2] = 0;
-            mPatternChannels[7] = 0;
             mPatternChannels[3] = 0;
+            mPatternChannels[4] = 0;
+            mPatternChannels[5] = 0;
+            mPatternChannels[6] = 0;
+            mPatternChannels[7] = 0;
             mPatternChannels[8] = 0;
             mPatternChannels[9] = 0;
 
             // 1
             if( mDigitalInput1 )
             {
-                mPatternChannels[4] += ( mDigitalTicks1 == 0 || mDigitalTicks1 == 1 ) ? 0x7F : 0x00;
+                mPatternChannels[0] += ( mDigitalTicks1 == 0 || mDigitalTicks1 == 1 ) ? 0x7F : 0x00;
                 mPatternChannels[1] += ( mDigitalTicks1 == 1 || mDigitalTicks1 == 2 ) ? 0x7F : 0x00;
-                mPatternChannels[5] += ( mDigitalTicks1 == 2 || mDigitalTicks1 == 3 ) ? 0x7F : 0x00;
-                mPatternChannels[0] += ( mDigitalTicks1 == 3 || mDigitalTicks1 == 4 ) ? 0x7F : 0x00;
-                mPatternChannels[6] += ( mDigitalTicks1 == 4 || mDigitalTicks1 == 5 ) ? 0x7F : 0x00;
-                mPatternChannels[2] += ( mDigitalTicks1 == 5 || mDigitalTicks1 == 6 ) ? 0x7F : 0x00;
-                mPatternChannels[7] += ( mDigitalTicks1 == 6 || mDigitalTicks1 == 7 ) ? 0x7F : 0x00;
-                mPatternChannels[3] += ( mDigitalTicks1 == 7 || mDigitalTicks1 == 8 ) ? 0x7F : 0x00;
+                mPatternChannels[2] += ( mDigitalTicks1 == 2 || mDigitalTicks1 == 3 ) ? 0x7F : 0x00;
+                mPatternChannels[3] += ( mDigitalTicks1 == 3 || mDigitalTicks1 == 4 ) ? 0x7F : 0x00;
+                mPatternChannels[4] += ( mDigitalTicks1 == 4 || mDigitalTicks1 == 5 ) ? 0x7F : 0x00;
+                mPatternChannels[5] += ( mDigitalTicks1 == 5 || mDigitalTicks1 == 6 ) ? 0x7F : 0x00;
+                mPatternChannels[6] += ( mDigitalTicks1 == 6 || mDigitalTicks1 == 7 ) ? 0x7F : 0x00;
+                mPatternChannels[7] += ( mDigitalTicks1 == 7 || mDigitalTicks1 == 8 ) ? 0x7F : 0x00;
                 mPatternChannels[8] += ( mDigitalTicks1 == 8 || mDigitalTicks1 == 9 ) ? 0x7F : 0x00;
                 mPatternChannels[9] += ( mDigitalTicks1 == 9 || mDigitalTicks1 == 10 ) ? 0x7F : 0x00;
                 if( ++mDigitalTicks1 > 11 )
@@ -322,14 +328,14 @@ unsigned char PatternProcess( void )
             // 2
             if( mDigitalInput2 )
             {
-                mPatternChannels[4] += ( mDigitalTicks2 == 0 || mDigitalTicks2 == 1 ) ? 0x7F : 0x00;
+                mPatternChannels[0] += ( mDigitalTicks2 == 0 || mDigitalTicks2 == 1 ) ? 0x7F : 0x00;
                 mPatternChannels[1] += ( mDigitalTicks2 == 1 || mDigitalTicks2 == 2 ) ? 0x7F : 0x00;
-                mPatternChannels[5] += ( mDigitalTicks2 == 2 || mDigitalTicks2 == 3 ) ? 0x7F : 0x00;
-                mPatternChannels[0] += ( mDigitalTicks2 == 3 || mDigitalTicks2 == 4 ) ? 0x7F : 0x00;
-                mPatternChannels[6] += ( mDigitalTicks2 == 4 || mDigitalTicks2 == 5 ) ? 0x7F : 0x00;
-                mPatternChannels[2] += ( mDigitalTicks2 == 5 || mDigitalTicks2 == 6 ) ? 0x7F : 0x00;
-                mPatternChannels[7] += ( mDigitalTicks2 == 6 || mDigitalTicks2 == 7 ) ? 0x7F : 0x00;
-                mPatternChannels[3] += ( mDigitalTicks2 == 7 || mDigitalTicks2 == 8 ) ? 0x7F : 0x00;
+                mPatternChannels[2] += ( mDigitalTicks2 == 2 || mDigitalTicks2 == 3 ) ? 0x7F : 0x00;
+                mPatternChannels[3] += ( mDigitalTicks2 == 3 || mDigitalTicks2 == 4 ) ? 0x7F : 0x00;
+                mPatternChannels[4] += ( mDigitalTicks2 == 4 || mDigitalTicks2 == 5 ) ? 0x7F : 0x00;
+                mPatternChannels[5] += ( mDigitalTicks2 == 5 || mDigitalTicks2 == 6 ) ? 0x7F : 0x00;
+                mPatternChannels[6] += ( mDigitalTicks2 == 6 || mDigitalTicks2 == 7 ) ? 0x7F : 0x00;
+                mPatternChannels[7] += ( mDigitalTicks2 == 7 || mDigitalTicks2 == 8 ) ? 0x7F : 0x00;
                 mPatternChannels[8] += ( mDigitalTicks2 == 8 || mDigitalTicks2 == 9 ) ? 0x7F : 0x00;
                 mPatternChannels[9] += ( mDigitalTicks2 == 9 || mDigitalTicks2 == 10 ) ? 0x7F : 0x00;
                 if( ++mDigitalTicks2 > 11 )
@@ -352,14 +358,14 @@ unsigned char PatternProcess( void )
             mDigitalPatternTime = millis();
             mUpdatedChannels = 1;
 
-            mPatternChannels[4] = 0;
-            mPatternChannels[1] = 0;
-            mPatternChannels[5] = 0;
             mPatternChannels[0] = 0;
-            mPatternChannels[6] = 0;
+            mPatternChannels[1] = 0;
             mPatternChannels[2] = 0;
-            mPatternChannels[7] = 0;
             mPatternChannels[3] = 0;
+            mPatternChannels[4] = 0;
+            mPatternChannels[5] = 0;
+            mPatternChannels[6] = 0;
+            mPatternChannels[7] = 0;
             mPatternChannels[8] = 0;
             mPatternChannels[9] = 0;
 
@@ -367,14 +373,14 @@ unsigned char PatternProcess( void )
             {
                 if( mDigitalFadeInput & ( 0x01 << i ) )
                 {
-                    mPatternChannels[4] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 0 );
+                    mPatternChannels[0] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 0 );
                     mPatternChannels[1] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 1 );
-                    mPatternChannels[5] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 2 );
-                    mPatternChannels[0] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 3 );
-                    mPatternChannels[6] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 4 );
-                    mPatternChannels[1] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 5 );
-                    mPatternChannels[7] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 6 );
-                    mPatternChannels[3] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 7 );
+                    mPatternChannels[2] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 2 );
+                    mPatternChannels[3] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 3 );
+                    mPatternChannels[4] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 4 );
+                    mPatternChannels[5] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 5 );
+                    mPatternChannels[6] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 6 );
+                    mPatternChannels[7] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 7 );
                     mPatternChannels[8] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 8 );
                     mPatternChannels[9] += WaveAtTick( mDigitalFadeTicks - mDigitalFadeTicksStart[i] - 9 );
                 }
@@ -411,10 +417,10 @@ unsigned char PatternProcess( void )
             {
                 lo += mPatternFrequencies[i];
             }
-            mPatternChannels[4] = ( lo <= 0xFF ) ? lo : 0xFF;
-            mPatternChannels[1] = ( lo <= 0xFF ) ? lo : 0xFF;
-            mPatternChannels[5] = ( lo <= 0xFF ) ? lo : 0xFF;
             mPatternChannels[0] = ( lo <= 0xFF ) ? lo : 0xFF;
+            mPatternChannels[1] = ( lo <= 0xFF ) ? lo : 0xFF;
+            mPatternChannels[2] = ( lo <= 0xFF ) ? lo : 0xFF;
+            mPatternChannels[3] = ( lo <= 0xFF ) ? lo : 0xFF;
         }
 
         if( ( millis() - mDigitalPatternTime > 10 ) && ( mDigitalInput1 || mDigitalInput2 ) )
@@ -422,20 +428,20 @@ unsigned char PatternProcess( void )
             mDigitalPatternTime = millis();
             mUpdatedChannels = 1;
 
+            mPatternChannels[4] = 0;
+            mPatternChannels[5] = 0;
             mPatternChannels[6] = 0;
-            mPatternChannels[2] = 0;
             mPatternChannels[7] = 0;
-            mPatternChannels[3] = 0;
             mPatternChannels[8] = 0;
             mPatternChannels[9] = 0;
 
             // 1
             if( mDigitalInput1 )
             {
-                mPatternChannels[6] += ( mDigitalTicks1 == 0 || mDigitalTicks1 == 1 ) ? 0x7F : 0x00;
-                mPatternChannels[2] += ( mDigitalTicks1 == 1 || mDigitalTicks1 == 2 ) ? 0x7F : 0x00;
-                mPatternChannels[7] += ( mDigitalTicks1 == 2 || mDigitalTicks1 == 3 ) ? 0x7F : 0x00;
-                mPatternChannels[3] += ( mDigitalTicks1 == 3 || mDigitalTicks1 == 4 ) ? 0x7F : 0x00;
+                mPatternChannels[4] += ( mDigitalTicks1 == 0 || mDigitalTicks1 == 1 ) ? 0x7F : 0x00;
+                mPatternChannels[5] += ( mDigitalTicks1 == 1 || mDigitalTicks1 == 2 ) ? 0x7F : 0x00;
+                mPatternChannels[6] += ( mDigitalTicks1 == 2 || mDigitalTicks1 == 3 ) ? 0x7F : 0x00;
+                mPatternChannels[7] += ( mDigitalTicks1 == 3 || mDigitalTicks1 == 4 ) ? 0x7F : 0x00;
                 mPatternChannels[8] += ( mDigitalTicks1 == 4 || mDigitalTicks1 == 5 ) ? 0x7F : 0x00;
                 mPatternChannels[9] += ( mDigitalTicks1 == 5 || mDigitalTicks1 == 6 ) ? 0x7F : 0x00;
                 if( ++mDigitalTicks1 > 7 )
@@ -448,10 +454,10 @@ unsigned char PatternProcess( void )
             // 2
             if( mDigitalInput2 )
             {
-                mPatternChannels[6] += ( mDigitalTicks2 == 0 || mDigitalTicks2 == 1 ) ? 0x7F : 0x00;
-                mPatternChannels[2] += ( mDigitalTicks2 == 1 || mDigitalTicks2 == 2 ) ? 0x7F : 0x00;
-                mPatternChannels[7] += ( mDigitalTicks2 == 2 || mDigitalTicks2 == 3 ) ? 0x7F : 0x00;
-                mPatternChannels[3] += ( mDigitalTicks2 == 3 || mDigitalTicks2 == 4 ) ? 0x7F : 0x00;
+                mPatternChannels[4] += ( mDigitalTicks2 == 0 || mDigitalTicks2 == 1 ) ? 0x7F : 0x00;
+                mPatternChannels[5] += ( mDigitalTicks2 == 1 || mDigitalTicks2 == 2 ) ? 0x7F : 0x00;
+                mPatternChannels[6] += ( mDigitalTicks2 == 2 || mDigitalTicks2 == 3 ) ? 0x7F : 0x00;
+                mPatternChannels[7] += ( mDigitalTicks2 == 3 || mDigitalTicks2 == 4 ) ? 0x7F : 0x00;
                 mPatternChannels[8] += ( mDigitalTicks2 == 4 || mDigitalTicks2 == 5 ) ? 0x7F : 0x00;
                 mPatternChannels[9] += ( mDigitalTicks2 == 5 || mDigitalTicks2 == 6 ) ? 0x7F : 0x00;
                 if( ++mDigitalTicks2 > 7 )
@@ -470,14 +476,14 @@ unsigned char PatternProcess( void )
             mUpdatedChannels = 1;
 
             unsigned char absMean = Abs( mRawMean );
-            mPatternChannels[4] = ( absMean > 0 ) ? 0xFF : 0x00;
+            mPatternChannels[0] = ( absMean > 0 ) ? 0xFF : 0x00;
             mPatternChannels[1] = ( absMean > 1 ) ? 0xFF : 0x00;
-            mPatternChannels[5] = ( absMean > 2 ) ? 0xFF : 0x00;
-            mPatternChannels[0] = ( absMean > 3 ) ? 0xFF : 0x00;
-            mPatternChannels[6] = ( absMean > 4 ) ? 0xFF : 0x00;
-            mPatternChannels[2] = ( absMean > 5 ) ? 0xFF : 0x00;
-            mPatternChannels[7] = ( absMean > 6 ) ? 0xFF : 0x00;
-            mPatternChannels[3] = ( absMean > 7 ) ? 0xFF : 0x00;
+            mPatternChannels[2] = ( absMean > 2 ) ? 0xFF : 0x00;
+            mPatternChannels[3] = ( absMean > 3 ) ? 0xFF : 0x00;
+            mPatternChannels[4] = ( absMean > 4 ) ? 0xFF : 0x00;
+            mPatternChannels[5] = ( absMean > 5 ) ? 0xFF : 0x00;
+            mPatternChannels[6] = ( absMean > 6 ) ? 0xFF : 0x00;
+            mPatternChannels[7] = ( absMean > 7 ) ? 0xFF : 0x00;
             mPatternChannels[8] = ( absMean > 8 ) ? 0xFF : 0x00;
             mPatternChannels[9] = ( absMean > 9 ) ? 0xFF : 0x00;
         }
@@ -489,14 +495,14 @@ unsigned char PatternProcess( void )
             mNewRaw = 0;
             mUpdatedChannels = 1;
 
-            mPatternChannels[4] = ( mRawPeak > 0xF5 ) ? 0xFF : 0x00;
+            mPatternChannels[0] = ( mRawPeak > 0xF5 ) ? 0xFF : 0x00;
             mPatternChannels[1] = ( mRawPeak > 0xF6 ) ? 0xFF : 0x00;
-            mPatternChannels[5] = ( mRawPeak > 0xF7 ) ? 0xFF : 0x00;
-            mPatternChannels[0] = ( mRawPeak > 0xF8 ) ? 0xFF : 0x00;
-            mPatternChannels[6] = ( mRawPeak > 0xF9 ) ? 0xFF : 0x00;
-            mPatternChannels[2] = ( mRawPeak > 0xFA ) ? 0xFF : 0x00;
-            mPatternChannels[7] = ( mRawPeak > 0xFB ) ? 0xFF : 0x00;
-            mPatternChannels[3] = ( mRawPeak > 0xFC ) ? 0xFF : 0x00;
+            mPatternChannels[2] = ( mRawPeak > 0xF7 ) ? 0xFF : 0x00;
+            mPatternChannels[3] = ( mRawPeak > 0xF8 ) ? 0xFF : 0x00;
+            mPatternChannels[4] = ( mRawPeak > 0xF9 ) ? 0xFF : 0x00;
+            mPatternChannels[5] = ( mRawPeak > 0xFA ) ? 0xFF : 0x00;
+            mPatternChannels[6] = ( mRawPeak > 0xFB ) ? 0xFF : 0x00;
+            mPatternChannels[7] = ( mRawPeak > 0xFC ) ? 0xFF : 0x00;
             mPatternChannels[8] = ( mRawPeak > 0xFD ) ? 0xFF : 0x00;
             mPatternChannels[9] = ( mRawPeak > 0xFE ) ? 0xFF : 0x00;
         }
@@ -508,14 +514,14 @@ unsigned char PatternProcess( void )
             mUpdatedChannels = 1;
             mSweepTime = millis();
 
-            mPatternChannels[4] = ( mCycleCount == 0 ) ? 0xFF : 0x00;
+            mPatternChannels[0] = ( mCycleCount == 0 ) ? 0xFF : 0x00;
             mPatternChannels[1] = ( mCycleCount == 1 ) ? 0xFF : 0x00;
-            mPatternChannels[5] = ( mCycleCount == 2 ) ? 0xFF : 0x00;
-            mPatternChannels[0] = ( mCycleCount == 3 ) ? 0xFF : 0x00;
-            mPatternChannels[6] = ( mCycleCount == 4 ) ? 0xFF : 0x00;
-            mPatternChannels[2] = ( mCycleCount == 5 ) ? 0xFF : 0x00;
-            mPatternChannels[7] = ( mCycleCount == 6 ) ? 0xFF : 0x00;
-            mPatternChannels[3] = ( mCycleCount == 7 ) ? 0xFF : 0x00;
+            mPatternChannels[2] = ( mCycleCount == 2 ) ? 0xFF : 0x00;
+            mPatternChannels[3] = ( mCycleCount == 3 ) ? 0xFF : 0x00;
+            mPatternChannels[4] = ( mCycleCount == 4 ) ? 0xFF : 0x00;
+            mPatternChannels[5] = ( mCycleCount == 5 ) ? 0xFF : 0x00;
+            mPatternChannels[6] = ( mCycleCount == 6 ) ? 0xFF : 0x00;
+            mPatternChannels[7] = ( mCycleCount == 7 ) ? 0xFF : 0x00;
             mPatternChannels[8] = ( mCycleCount == 8 ) ? 0xFF : 0x00;
             mPatternChannels[9] = ( mCycleCount == 9 ) ? 0xFF : 0x00;
 

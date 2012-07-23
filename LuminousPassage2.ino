@@ -4,6 +4,7 @@
 // INCLUDES
 //*****************
 
+#include "config.h"
 #include "ad.h"
 #include "fft.h"
 #include "pattern.h"
@@ -16,7 +17,7 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
 
 //*****************
@@ -52,10 +53,19 @@ void setup( void )
     while( !Serial );
 
     // Init modules
+#if defined( MASTER_SINGLE ) || defined( MASTER )
     AdInit();
     PatternInit();
-    PwmInit();
     ComMasterInit();
+#endif
+
+#if !defined( MASTER )
+    PwmInit();
+#endif
+
+#if !defined( MASTER_SINGLE ) && !defined( MASTER )
+    ComSlaveInit();
+#endif
 
     //TestFft();
 }
@@ -66,6 +76,9 @@ void setup( void )
 
 void loop( void )
 {
+
+#if defined( MASTER_SINGLE ) || defined( MASTER )
+
     // Check for A/D sample
     AdProcess();
     if( AdReady() )
@@ -114,12 +127,35 @@ void loop( void )
         mUpdatePwm = 1;
     }
 
+#else   // SLAVE
+
+    // Check for new data over i2c
+    if( 0 )//newData )
+    {
+        // GetData
+        mUpdatePwm = 1;
+    }
+
+#endif
+
+#if !defined( MASTER )
+
     if( mUpdatePwm )
     {
         mUpdatePwm = 0;
         PwmSetChannels( mPwmValues );
     }
     PwmProcess();
+
+#else
+
+    if( mUpdatePwm )
+    {
+        mUpdatePwm = 0;
+        ComMasterSendBytes( mPwmValues );
+    }
+
+#endif
 
 #ifdef DEBUG
     static unsigned long mDebugPrintTime = millis();

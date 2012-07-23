@@ -39,6 +39,7 @@
 #include "twi.h"
 
 #include "comMaster.h"
+#include "comSlave.h"
 
 static volatile uint8_t twi_state;
 static volatile uint8_t twi_slarw;
@@ -362,7 +363,7 @@ void twi_releaseBus(void)
   twi_state = TWI_READY;
 }
 
-#ifdef COM_MASTER_TWI_VERSION
+#if (  defined( MASTER ) && defined( COM_MASTER_TWI_VERSION ) ) || ( !defined( MASTER ) && defined( COM_SLAVE_TWI_VERSION ) )
 SIGNAL(TWI_vect)
 {
   switch(TW_STATUS){
