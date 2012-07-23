@@ -17,7 +17,7 @@
 // DEFINITIONS
 //*****************
 
-//#define DEBUG
+#define DEBUG
 
 
 //*****************
@@ -163,6 +163,7 @@ void loop( void )
     {
         mDebugPrintTime = millis();
 
+        /*
         // Analog audio
         Serial.print( F(" AdPeak=") );
         Serial.print( mAdPeak );
@@ -172,6 +173,7 @@ void loop( void )
         Serial.print( mAdOffset );
         Serial.print( F(" FftCounts=") );
         Serial.print( mFftCount );
+        */
 
         /*
         Serial.print( F(" AD Samples: ") );
@@ -191,11 +193,15 @@ void loop( void )
         Serial.print( "\n\r" );
         */
 
+        /*
         PrintDataUint( " FFT:", mFftMag, 11 );
         //PrintDataUint( " FFT4:", mFftFourBuckets, 4 );
         Serial.print( "\n\r" );
 
         mFftCount = 0;
+        */
+
+        PrintDataUint( "", mFftMag, 32 );
     }
 #endif
 
