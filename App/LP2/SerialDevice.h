@@ -1,11 +1,4 @@
-/**
- * \file SerialDevice.h
- *
- * Copyright (c) 2011, Topcon Medical Systems, Inc.
- * All rights reserved.
- *
- * Declare the cSerialDevice class.
- */
+// File: SerialDevice.h
 
 #ifndef SERIAL_DEVICE_H
 #define SERIAL_DEVICE_H
@@ -17,6 +10,7 @@
 #include "SequentialDevice.h"
 
 class QSocketNotifier;
+
 
 //******************
 // CLASS

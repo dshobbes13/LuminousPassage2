@@ -10,8 +10,6 @@
 #define AD_ISR_VERSION
 //#define AD_BLOCKING_VERSION
 
-#define AD_NUM_SAMPLES    128
-
 
 //*****************
 // PUBLIC FUNCTIONS

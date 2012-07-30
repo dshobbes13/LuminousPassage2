@@ -11,7 +11,6 @@
 //#define COM_MASTER_BLOCKING_VERSION
 #define COM_MASTER_ISR_VERSION
 
-#define COM_MASTER_NUM_BYTES    59
 
 //*****************
 // PUBLIC FUNCTIONS

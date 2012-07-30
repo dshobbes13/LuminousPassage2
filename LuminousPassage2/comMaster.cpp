@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 
+#include "global.h"
 #include "utility.h"
 
 #ifdef COM_MASTER_TWI_VERSION
@@ -42,7 +43,7 @@ volatile static unsigned char mCurrentByte = 0;
 volatile static unsigned char mBusy = 0;
 #endif
 
-volatile static unsigned char mBytes[COM_MASTER_NUM_BYTES] = {0};
+volatile static unsigned char mBytes[GLOBAL_NUM_CHANNELS] = {0};
 
 //*****************
 // PRIVATE PROTOTYPES
@@ -90,7 +91,7 @@ void ComMasterInit( void )
 #ifdef COM_MASTER_BLOCKING_VERSION
     SendStart();
     SendAddress( 0x00 );
-    for( unsigned char i=0; i<COM_MASTER_NUM_BYTES; i++ )
+    for( unsigned char i=0; i<GLOBAL_NUM_CHANNELS; i++ )
     {
         SendData( mBytes[i] );
     }
@@ -113,17 +114,17 @@ void ComMasterProcess( void )
 void ComMasterSendBytes( unsigned char* bytes )
 {
     cli();
-    memcpy( (void*)mBytes, bytes, COM_MASTER_NUM_BYTES );
+    memcpy( (void*)mBytes, bytes, GLOBAL_NUM_CHANNELS );
     sei();
 
 #ifdef COM_MASTER_TWI_VERSION
-    twi_writeTo( 0x00, mBytes, COM_MASTER_NUM_BYTES, false, true );
+    twi_writeTo( 0x00, mBytes, GLOBAL_NUM_CHANNELS, false, true );
 #endif
 
 #ifdef COM_MASTER_BLOCKING_VERSION
     SendStart();
     SendAddress( 0x00 );
-    for( unsigned char i=0; i<COM_MASTER_NUM_BYTES; i++ )
+    for( unsigned char i=0; i<GLOBAL_NUM_CHANNELS; i++ )
     {
         SendData( mBytes[i] );
     }
@@ -193,7 +194,7 @@ ISR( TWI_vect )
         // Send data bytes
         TWDR = (unsigned char)mBytes[mCurrentByte];
         TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
-        if( ++mCurrentByte >= COM_MASTER_NUM_BYTES )
+        if( ++mCurrentByte >= GLOBAL_NUM_CHANNELS )
         {
             mTwiStep++;
         }

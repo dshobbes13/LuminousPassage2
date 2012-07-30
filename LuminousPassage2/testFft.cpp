@@ -23,7 +23,7 @@
 //*****************
 
 static char mImagData[NUM_SAMPLES];
-static unsigned int mMagnitude[NUM_SAMPLES];
+static unsigned char mMagnitude[NUM_SAMPLES];
 
 static char TEST_DC[NUM_SAMPLES] = {
 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -123,5 +123,5 @@ void test( const char* label, char* data )
     }
     fix_fft( data, mImagData, 6, 0 );
     Magnitude( mMagnitude, data, mImagData, NUM_SAMPLES/2 );
-    PrintDataUint( label, mMagnitude, NUM_SAMPLES/2 );
+    PrintDataUchar( label, mMagnitude, NUM_SAMPLES/2 );
 }

@@ -1,37 +1,100 @@
+// File: LP2.h
+
 #ifndef LP2_H
 #define LP2_H
 
-#include <QDialog>
+//******************
+// INCLUDES
+//******************
 
+#include <QWidget>
+
+#include <QByteArray>
+#include <QElapsedTimer>
+#include <QString>
+#include <QStringList>
+
+#include "global.h"
+
+class QComboBox;
+class QDoubleSpinBox;
+class QElapsedTimer;
+class QLabel;
+class QListWidget;
 class QProgressBar;
 class QPushButton;
+class QSpinBox;
 
 class cFft;
 class cSerialDevice;
+class cLights;
 
-#define NUM_FFT     64
+
+//******************
+// DEFINITIONS
+//******************
+
+
+//******************
+// CLASS
+//******************
 
 class cLP2 : public QWidget
 {
     Q_OBJECT
-    
+
 public:
     cLP2( QWidget* pParent = 0 );
     ~cLP2();
 
+signals:
+    void NewMessage( QByteArray message );
+
 private slots:
+    void Open( void );
+    void Close( void );
     void Read( void );
+    void HandleNewMessage( QByteArray message );
+    void HandleTimeout( void );
+    void UpdateThreshold( void );
+    void UpdateBuckets( void );
+    void UpdateAveraging( double averaging );
+    void HandleEffect( void );
 
 private:
-    QPushButton* mpButton;
-    QProgressBar* mpProgress[NUM_FFT];
+    void AddMessage( QString message );
+
+    QComboBox* mpSerialPorts;
+    QPushButton* mpOpenButton;
+    QPushButton* mpCloseButton;
+
+    QStringList mFftLabels;
+    cFft* mpFft;
+    cFft* mpBuckets;
+
+    QComboBox* mpEffects;
+    QPushButton* mpToggleEffect;
+    cLights* mpLights;
+
+    QSpinBox* mpLo[GLOBAL_NUM_BUCKETS];
+    QSpinBox* mpHi[GLOBAL_NUM_BUCKETS];
+    QSpinBox* mpThreshold;
+    QDoubleSpinBox* mpAveraging;
+
+    QListWidget* mpMessages;
+    QLabel* mpLabel;
 
     cSerialDevice* mpSerial;
 
-    cFft* mpFft;
+    QByteArray mDataRx;
+    QElapsedTimer mReadTimer;
+    bool mFirstRead;
 
-    quint8 mData[NUM_FFT];
+    qint32 mCountMessages;
+    QElapsedTimer mNewMessageTimer;
+
     quint32 mBytes;
+    quint32 mUpdateNumber;
 
 };
 

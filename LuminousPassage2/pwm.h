@@ -7,7 +7,6 @@
 // DEFINITIONS
 //*****************
 
-#define PWM_NUM_CHANNELS    10
 
 //*****************
 // PUBLIC FUNCTIONS

@@ -1,11 +1,4 @@
-/**
- * \file SequentialDevice.cpp
- *
- * Copyright (c) 2011, Topcon Medical Systems, Inc.
- * All rights reserved.
- *
- * Implement the iSequentialDevice abstract base class.
- */
+// File: SequentialDevice.cpp
 
 //******************
 // INCLUDES
@@ -118,6 +111,8 @@ bool iSequentialDevice::open( OpenMode mode )
         return false;
     }
 
+    fcntl( mFileDescriptor, F_SETFL, 0 );
+
     if( SetupDevice( mFileDescriptor ) != 0 )
     {
         ::close( mFileDescriptor );
@@ -162,17 +157,6 @@ qint64 iSequentialDevice::writeData( const char* data, qint64 maxSize )
     if( mFileDescriptor >= 0 )
     {
         amountWritten = ::write( mFileDescriptor, data, maxSize );
-
-        std::stringstream sstr;
-        for( int i = 0; i < amountWritten; i++ )
-        {
-            sstr << std::hex << std::setw( 3 ) << uint16_t( uint8_t( *( data + i ) ) );
-            if( ( i + 1 ) % 16 == 0 )
-            {
-                sstr.str( "" );
-            }
-        }
-
     }
 
     return amountWritten;
@@ -202,16 +186,6 @@ void iSequentialDevice::FileActivated( void )
     ssize_t amountRead = ::read( mFileDescriptor, incomingData.data(), incomingData.size() );
     if( amountRead >= 0 )
     {
-        std::stringstream sstr;
-        for( int i = 0; i < amountRead; i++ )
-        {
-            sstr << std::hex << std::setw( 3 ) << uint16_t( uint8_t( *( incomingData.data() + i ) ) );
-            if( ( i + 1 ) % 16 == 0 )
-            {
-                sstr.str( "" );
-            }
-        }
-
         mDataBuffer.append( incomingData.left( amountRead ) );
 
         if( bytesAvailable() > 0 )

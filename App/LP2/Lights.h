@@ -1,7 +1,7 @@
-// File: Fft.h
+// File: Lights.h
 
-#ifndef FFT_H
-#define FFT_H
+#ifndef LIGHTS_H
+#define LIGHTS_H
 
 //******************
 // INCLUDES
@@ -29,32 +29,27 @@ class QResizeEvent;
 // CLASS
 //******************
 
-class cFft : public QWidget
+class cLights : public QWidget
 {
     Q_OBJECT
     
 public:
-    cFft( qint32 number, qint32 scale, QStringList labels, QWidget* pParent = 0 );
-    ~cFft();
+    cLights( quint8 number, QWidget* pParent = 0 );
+    ~cLights();
 
     virtual QSize sizeHint( void ) const;
     virtual QSize minimumSizeHint( void ) const;
 
 public slots:
-    void UpdateData( QVector<quint32> newData, QVector<quint32> newAverages );
+    void UpdateData( QVector<quint8> newData );
     void Reset( void );
 
 protected:
-    virtual void resizeEvent( QResizeEvent* pEvent );
     virtual void paintEvent( QPaintEvent* pEvent );
 
 private:
-    qint32 mNumber;
-    qint32 mScale;
-    QList<QLabel*> mLabelList;
-    QVector<quint32> mData;
-    QVector<quint32> mAverages;
-    QVector<quint32> mPeak;
+    quint8 mNumber;
+    QVector<quint8> mData;
 };
 
-#endif // FFT_H
+#endif // LIGHTS_H

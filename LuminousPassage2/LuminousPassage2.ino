@@ -4,12 +4,13 @@
 // INCLUDES
 //*****************
 
-#include "config.h"
 #include "ad.h"
+#include "comMaster.h"
+#include "config.h"
 #include "fft.h"
+#include "global.h"
 #include "pattern.h"
 #include "pwm.h"
-#include "comMaster.h"
 #include "testFft.h"
 #include "utility.h"
 
@@ -24,11 +25,12 @@
 // VARIABLES
 //*****************
 
-static char mFftDataReal[AD_NUM_SAMPLES];
-static char mFftDataImag[AD_NUM_SAMPLES];
-static unsigned int mFftMag[AD_NUM_SAMPLES];
+static char mFftDataReal[GLOBAL_NUM_SAMPLES] = {0};
+static char mFftDataImag[GLOBAL_NUM_SAMPLES] = {0};
+static unsigned char mFftMag[GLOBAL_NUM_SAMPLES/2] = {0};
+static unsigned char mFftSum[GLOBAL_NUM_SAMPLES/2] = {0};
 
-static unsigned char mPwmValues[PWM_NUM_CHANNELS] = {0};
+static unsigned char mPwmValues[GLOBAL_NUM_CHANNELS] = {0};
 
 static unsigned char mAdTemp = 0;
 static unsigned char mAdPeak = 0;
@@ -37,6 +39,8 @@ static unsigned char mAdMean = 0;
 static unsigned char mAdOffset = 128;
 
 static unsigned long mFftCount = 0;
+
+static unsigned long mLastPatternTime = 0;
 
 static unsigned char mNewFft = 0;
 static unsigned char mUpdatePwm = 0;
@@ -68,6 +72,13 @@ void setup( void )
 #endif
 
     //TestFft();
+    //while(1);
+
+    mLastPatternTime = micros();
+
+#ifdef DEBUG
+    DebugInit();
+#endif
 }
 
 //*****************
@@ -88,7 +99,7 @@ void loop( void )
 
         mAdPeak = 0;
         mAdSum = 0;
-        for( unsigned int i=0; i<AD_NUM_SAMPLES; i++ )
+        for( unsigned int i=0; i<GLOBAL_NUM_SAMPLES; i++ )
         {
             mAdTemp = (unsigned char)mFftDataReal[i];
             if( mAdTemp > mAdPeak )
@@ -97,12 +108,12 @@ void loop( void )
             }
             mAdSum += mAdTemp;
         }
-        mAdMean = mAdSum / AD_NUM_SAMPLES;
+        mAdMean = mAdSum / GLOBAL_NUM_SAMPLES;
         mAdOffset = ( mAdOffset >> 1 ) + ( mAdMean >> 1 );
 
         // Prep fft data
         unsigned char offset = 128;
-        for( unsigned int i=0; i<AD_NUM_SAMPLES; i++ )
+        for( unsigned int i=0; i<GLOBAL_NUM_SAMPLES; i++ )
         {
             mFftDataReal[i] = (unsigned char)mFftDataReal[i] - offset;
             mFftDataImag[i] = 0;
@@ -110,21 +121,70 @@ void loop( void )
 
         // Do Fft
         fix_fft( mFftDataReal, mFftDataImag, 7, 0 );
-        Magnitude( mFftMag, mFftDataReal, mFftDataImag, AD_NUM_SAMPLES/2 );
+        Magnitude( mFftMag, mFftDataReal, mFftDataImag, GLOBAL_NUM_SAMPLES/2 );
 
-        mFftCount++;
         mNewFft = 1;
     }
 
+    // Check for any new commands
+    if( Serial.available() )
+    {
+        unsigned int command = Serial.read();
+        unsigned char byteCommand = (quint8)command;
+        if( ( byteCommand >= '0' ) && ( byteCommand <= '9' ) )
+        {
+            eEffect effect = (eEffect)( byteCommand - '0' );
+            if( PatternGetEffect( effect ) )
+            {
+                PatternSetEffect( effect, false );
+            }
+            else
+            {
+                PatternSetEffect( effect, true );
+            }
+        }
+    }
+
+    // Update pattern with new fft data
     if( mNewFft )
     {
-        PatternUpdateRaw( mAdMean, mAdPeak );
-        PatternUpdateFreq( mFftMag );
+        mNewFft = 0;
+        mFftCount++;
+        for( unsigned char i=0; i<GLOBAL_NUM_FREQ; i++ )
+        {
+            unsigned char value = mFftMag[i];
+            mFftSum[i] += ( value < 64 ) ? value : 63;
+        }
+        if( mFftCount >= 4 )
+        {
+            mFftCount = 0;
+
+            PatternUpdateAd( mAdMean, mAdPeak );
+            PatternUpdateFreq( mFftSum );
+
+            //PrintDataCharRaw( mFftSum, GLOBAL_NUM_FREQ );
+
+            for( unsigned char i=0; i<GLOBAL_NUM_FREQ; i ++ )
+            {
+                mFftSum[i] = 0;
+            }
+
+        }
     }
-    if( PatternProcess() )
+
+    // Give pattern generator processing time
+    if( ( micros() - mLastPatternTime ) >= 10000 )
     {
-        memcpy( mPwmValues, PatternData(), PWM_NUM_CHANNELS );
+#ifdef DEBUG
+        DebugUp();
+#endif
+        mLastPatternTime += 10000;
+        PatternProcess();
+        memcpy( mPwmValues, PatternData(), GLOBAL_NUM_CHANNELS );
         mUpdatePwm = 1;
+#ifdef DEBUG
+        DebugDown();
+#endif
     }
 
 #else   // SLAVE
@@ -200,8 +260,6 @@ void loop( void )
 
         mFftCount = 0;
         */
-
-        PrintDataUint( "", mFftMag, 32 );
     }
 #endif
 

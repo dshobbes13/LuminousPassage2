@@ -7,6 +7,8 @@
 // DEFINITIONS
 //*****************
 
+#define FIRMWARE
+
 #define MASTER_SINGLE
 //#define MASTER
 //#define SLAVE_0

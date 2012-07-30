@@ -17,13 +17,17 @@ void DebugUp( void );
 
 void DebugDown( void );
 
-void Magnitude( unsigned int* mag, char* real, char* imag, unsigned char n );
+void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n );
 
 unsigned char Sin( unsigned char index );
 
 unsigned char Cos( unsigned char index );
 
+void PrintDataCharRaw( unsigned char* data, unsigned char n );
+
 void PrintDataChar( const char* label, char* data, unsigned char n );
+
+void PrintDataUchar( const char* label, unsigned char* data, unsigned char n );
 
 void PrintDataUint( const char* label, unsigned int* data, unsigned char n );
 

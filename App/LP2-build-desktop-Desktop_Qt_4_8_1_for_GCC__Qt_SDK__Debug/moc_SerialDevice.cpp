@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'SerialDevice.h'
 **
-** Created: Sun Jul 22 22:41:45 2012
+** Created: Sun Jul 29 11:19:44 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!

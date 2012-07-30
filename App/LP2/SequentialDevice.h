@@ -1,11 +1,4 @@
-/**
- * \file SequentialDevice.h
- *
- * Copyright (c) 2011, Topcon Medical Systems, Inc.
- * All rights reserved.
- *
- * Declare the iSequentialDevice interface.
- */
+// File: SequentialDevice.h
 
 #ifndef SEQUENTIAL_DEVICE_H
 #define SEQUENTIAL_DEVICE_H
@@ -17,6 +10,7 @@
 #include <QIODevice>
 
 class QSocketNotifier;
+
 
 //******************
 // CLASS

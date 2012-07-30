@@ -11,12 +11,24 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        lp2.cpp \
-    fft.cpp \
     SerialDevice.cpp \
-    SequentialDevice.cpp
+    SequentialDevice.cpp \
+    Fft.cpp \
+    LP2.cpp \
+    ../../LuminousPassage2/pattern.cpp \
+    ../../LuminousPassage2/audio.cpp \
+    Lights.cpp
 
-HEADERS  += lp2.h \
-    fft.h \
+HEADERS  += \
     SerialDevice.h \
-    SequentialDevice.h
+    SequentialDevice.h \
+    Fft.h \
+    LP2.h \
+    ../../LuminousPassage2/pattern.h \
+    ../../LuminousPassage2/global.h \
+    ../../LuminousPassage2/audio.h \
+    Lights.h
+
+DEFINES += SOFTWARE
+
+INCLUDEPATH += ../../LuminousPassage2

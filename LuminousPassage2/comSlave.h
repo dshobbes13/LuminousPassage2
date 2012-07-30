@@ -11,7 +11,6 @@
 //#define COM_SLVAE_BLOCKING_VERSION
 #define COM_SLAVE_ISR_VERSION
 
-#define COM_SLAVE_NUM_BYTES    59
 
 //*****************
 // PUBLIC FUNCTIONS

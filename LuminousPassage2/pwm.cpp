@@ -8,6 +8,8 @@
 
 #include <Arduino.h>
 
+#include "config.h"
+#include "global.h"
 #include "utility.h"
 
 
@@ -15,7 +17,7 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
 //#define THRESH_16
 #define THRESH_24
@@ -40,7 +42,8 @@
 //*****************
 
 
-volatile static unsigned char mChannelValues[PWM_NUM_CHANNELS] = {0};
+volatile static unsigned char mChannelValues[GLOBAL_NUM_SINGLE_CH] = {0};
+
 
 #if defined( THRESH_16 )
 volatile static unsigned char mThresholdMap[PWM_NUM_THRESH] =
@@ -223,7 +226,16 @@ void PwmProcess( void )
 void PwmSetChannels( unsigned char* channelValues )
 {
     cli();
-    memcpy( (void*)mChannelValues, channelValues, PWM_NUM_CHANNELS );
+    mChannelValues[0] = channelValues[CH0];
+    mChannelValues[1] = channelValues[CH1];
+    mChannelValues[2] = channelValues[CH2];
+    mChannelValues[3] = channelValues[CH3];
+    mChannelValues[4] = channelValues[CH4];
+    mChannelValues[5] = channelValues[CH5];
+    mChannelValues[6] = channelValues[CH6];
+    mChannelValues[7] = channelValues[CH7];
+    mChannelValues[8] = channelValues[CH8];
+    mChannelValues[9] = channelValues[CH9];
     sei();
 }
 
@@ -235,7 +247,7 @@ ISR( INT0_vect )
 {
     static unsigned long lastTime = micros();
     // Debounce for noise
-    if( ( micros() - lastTime ) < 100 )
+    if( ( micros() - lastTime ) < 500 )
     {
         return;
     }

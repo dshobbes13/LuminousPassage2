@@ -1,15 +1,15 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'Fft.h'
+** Meta object code from reading C++ file 'Lights.h'
 **
-** Created: Sun Jul 29 11:19:45 2012
+** Created: Sun Jul 29 11:19:46 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../LP2/Fft.h"
+#include "../LP2/Lights.h"
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'Fft.h' doesn't include <QObject>."
+#error "The header file 'Lights.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 63
 #error "This file was generated using the moc from 4.8.1. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -17,7 +17,7 @@
 #endif
 
 QT_BEGIN_MOC_NAMESPACE
-static const uint qt_meta_data_cFft[] = {
+static const uint qt_meta_data_cLights[] = {
 
  // content:
        6,       // revision
@@ -31,58 +31,57 @@ static const uint qt_meta_data_cFft[] = {
        0,       // signalCount
 
  // slots: signature, parameters, type, tag, flags
-      26,    6,    5,    5, 0x0a,
-      72,    5,    5,    5, 0x0a,
+      17,    9,    8,    8, 0x0a,
+      45,    8,    8,    8, 0x0a,
 
        0        // eod
 };
 
-static const char qt_meta_stringdata_cFft[] = {
-    "cFft\0\0newData,newAverages\0"
-    "UpdateData(QVector<quint32>,QVector<quint32>)\0"
+static const char qt_meta_stringdata_cLights[] = {
+    "cLights\0\0newData\0UpdateData(QVector<quint8>)\0"
     "Reset()\0"
 };
 
-void cFft::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void cLights::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     if (_c == QMetaObject::InvokeMetaMethod) {
         Q_ASSERT(staticMetaObject.cast(_o));
-        cFft *_t = static_cast<cFft *>(_o);
+        cLights *_t = static_cast<cLights *>(_o);
         switch (_id) {
-        case 0: _t->UpdateData((*reinterpret_cast< QVector<quint32>(*)>(_a[1])),(*reinterpret_cast< QVector<quint32>(*)>(_a[2]))); break;
+        case 0: _t->UpdateData((*reinterpret_cast< QVector<quint8>(*)>(_a[1]))); break;
         case 1: _t->Reset(); break;
         default: ;
         }
     }
 }
 
-const QMetaObjectExtraData cFft::staticMetaObjectExtraData = {
+const QMetaObjectExtraData cLights::staticMetaObjectExtraData = {
     0,  qt_static_metacall 
 };
 
-const QMetaObject cFft::staticMetaObject = {
-    { &QWidget::staticMetaObject, qt_meta_stringdata_cFft,
-      qt_meta_data_cFft, &staticMetaObjectExtraData }
+const QMetaObject cLights::staticMetaObject = {
+    { &QWidget::staticMetaObject, qt_meta_stringdata_cLights,
+      qt_meta_data_cLights, &staticMetaObjectExtraData }
 };
 
 #ifdef Q_NO_DATA_RELOCATION
-const QMetaObject &cFft::getStaticMetaObject() { return staticMetaObject; }
+const QMetaObject &cLights::getStaticMetaObject() { return staticMetaObject; }
 #endif //Q_NO_DATA_RELOCATION
 
-const QMetaObject *cFft::metaObject() const
+const QMetaObject *cLights::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->metaObject : &staticMetaObject;
 }
 
-void *cFft::qt_metacast(const char *_clname)
+void *cLights::qt_metacast(const char *_clname)
 {
     if (!_clname) return 0;
-    if (!strcmp(_clname, qt_meta_stringdata_cFft))
-        return static_cast<void*>(const_cast< cFft*>(this));
+    if (!strcmp(_clname, qt_meta_stringdata_cLights))
+        return static_cast<void*>(const_cast< cLights*>(this));
     return QWidget::qt_metacast(_clname);
 }
 
-int cFft::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int cLights::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QWidget::qt_metacall(_c, _id, _a);
     if (_id < 0)

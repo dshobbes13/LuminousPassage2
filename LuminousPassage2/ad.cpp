@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 
+#include "global.h"
 #include "utility.h"
 
 
@@ -24,7 +25,7 @@
 // VARIABLES
 //*****************
 
-volatile static unsigned char mAdData[2][AD_NUM_SAMPLES] = { {0}, {0} };
+volatile static unsigned char mAdData[2][GLOBAL_NUM_SAMPLES] = { {0}, {0} };
 volatile static unsigned char mAdSampleArray = 0;
 volatile static unsigned char mAdSampleNumber = 0;
 volatile static unsigned char mAdReady = 0;
@@ -87,11 +88,27 @@ void AdInit( void )
     OCR1BL = 0x40;
     */
 
+    /*
     // 7680 Hz sampling
     OCR1AH = 0x08;
     OCR1AL = 0x23;
     OCR1BH = 0x08;
     OCR1BL = 0x23;
+    */
+
+    // 5120 Hz sampling
+    OCR1AH = 0x0C;
+    OCR1AL = 0x35;
+    OCR1BH = 0x0C;
+    OCR1BL = 0x35;
+
+    /*
+    // 5000 Hz sampling
+    OCR1AH = 0x0C;
+    OCR1AL = 0x80;
+    OCR1BH = 0x0C;
+    OCR1BL = 0x80;
+    */
 
     ICR1H = 0x00;
     ICR1L = 0x00;
@@ -133,7 +150,7 @@ void AdProcess( void )
         mAdData[0][mAdSampleNumber] = mAdSample;
 
         // Check for wrap on buffer
-        if( ++mAdSampleNumber >= AD_NUM_SAMPLES )
+        if( ++mAdSampleNumber >= GLOBAL_NUM_SAMPLES )
         {
             // Reset for next pass
             mAdSampleNumber = 0;
@@ -151,17 +168,17 @@ unsigned char AdReady( void )
 void AdData( unsigned char* data )
 {
 #ifdef AD_BLOCKING_VERSION
-    memcpy( data, (void*)&mAdData[0], AD_NUM_SAMPLES );
+    memcpy( data, (void*)&mAdData[0], GLOBAL_NUM_SAMPLES );
 #endif
 
 #ifdef AD_ISR_VERSION
     if( mAdSampleArray )
     {
-        memcpy( data, (void*)&mAdData[0], AD_NUM_SAMPLES );
+        memcpy( data, (void*)&mAdData[0], GLOBAL_NUM_SAMPLES );
     }
     else
     {
-        memcpy( data, (void*)&mAdData[1], AD_NUM_SAMPLES );
+        memcpy( data, (void*)&mAdData[1], GLOBAL_NUM_SAMPLES );
     }
 #endif
 
@@ -178,7 +195,7 @@ ISR( ADC_vect )
     sbi( TIFR1, OCF1B );
     // Get AD value
     mAdData[mAdSampleArray][mAdSampleNumber] = ADCH;
-    if( ++mAdSampleNumber >= AD_NUM_SAMPLES )
+    if( ++mAdSampleNumber >= GLOBAL_NUM_SAMPLES )
     {
         mAdSampleNumber = 0;
         mAdSampleArray = mAdSampleArray ? 0 : 1;

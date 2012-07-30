@@ -64,9 +64,9 @@ void DebugDown( void )
     PORTC = PORTC & ~0x08;
 }
 
-void Magnitude( unsigned int* mag, char* real, char* imag, unsigned char n )
+void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n )
 {
-    for( unsigned int i=0; i<n; i++ )
+    for( unsigned char i=0; i<n; i++ )
     {
         mag[i] = sqrt( pow( real[i], 2 ) + pow( imag[i], 2 ) );
     }
@@ -82,7 +82,25 @@ unsigned char Cos( unsigned char index )
     return pgm_read_byte_near( SINEWAVE + index + 64 );
 }
 
+void PrintDataCharRaw( unsigned char* data, unsigned char n )
+{
+    for( unsigned char i=0; i<n; i++ )
+    {
+        Serial.write( data[i] );
+    }
+}
+
 void PrintDataChar( const char* label, char* data, unsigned char n )
+{
+    Serial.print( label );
+    for( unsigned int i=0; i<n; i++ )
+    {
+        Serial.print( HexString( data[i] ) );
+        Serial.print( "::" );
+    }
+}
+
+void PrintDataUchar( const char* label, unsigned char* data, unsigned char n )
 {
     Serial.print( label );
     for( unsigned int i=0; i<n; i++ )

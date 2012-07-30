@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 
+#include "global.h"
 #include "utility.h"
 
 #ifdef COM_SLAVE_TWI_VERSION
@@ -36,7 +37,7 @@
 
 volatile static unsigned char mReadReady = 0;
 volatile static unsigned char mCurrentByte = 0;
-volatile static unsigned char mBytes[COM_SLAVE_NUM_BYTES] = {0};
+volatile static unsigned char mBytes[GLOBAL_NUM_SINGLE_CH] = {0};
 
 //*****************
 // PRIVATE PROTOTYPES
@@ -104,7 +105,7 @@ unsigned char ComSlaveReadReady( void )
 
 void ComSlaveRead( unsigned char* bytes )
 {
-    memcpy( bytes, (void*)mBytes, COM_SLAVE_NUM_BYTES );
+    memcpy( bytes, (void*)mBytes, GLOBAL_NUM_SINGLE_CH );
     mReadReady = 0;
     mCurrentByte = 0;
 }
@@ -116,12 +117,12 @@ void ComSlaveRead( unsigned char* bytes )
 #ifdef COM_SLAVE_TWI_VERSION
 void TwiRead( unsigned char* data, int length )
 {
-    if( ( COM_SLAVE_NUM_BYTES - mCurrentByte ) > length )
+    if( ( GLOBAL_NUM_SINGLE_CH - mCurrentByte ) > length )
     {
         memcpy( &mBytes[mCurrentByte], data, length );
     }
     mCurrentByte += length;
-    if( mCurrentByte >= COM_SLAVE_NUM_BYTES )
+    if( mCurrentByte >= GLOBAL_NUM_SINGLE_CH )
     {
         mReadReady = 1;
     }
