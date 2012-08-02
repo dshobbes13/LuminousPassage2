@@ -43,6 +43,8 @@ void PatternInit( void );
 
 void PatternSetEffect( eEffect effect, quint8 on );
 
+void PatternSetManual( quint8 value );
+
 quint8 PatternReady( void );
 
 void PatternData( quint8* data );

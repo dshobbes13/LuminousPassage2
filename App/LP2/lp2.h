@@ -32,6 +32,7 @@ class QSpinBox;
 class cFft;
 class cSerialDevice;
 class cLights;
+class cPatternThread;
 
 
 //******************
@@ -60,6 +61,7 @@ private slots:
     void Read( void );
     void HandleNewMessage( QByteArray message );
     void HandleTimeout( void );
+    void HandleUpdatedPattern( quint8* newPattern );
     void UpdateThreshold( void );
     void UpdateBuckets( void );
     void HandleBucketSliders( void );
@@ -83,6 +85,8 @@ private:
 
     QListWidget* mpEffects;
     cLights* mpLights;
+
+    cPatternThread* mpPatternThread;
 
     QSpinBox* mpLo[GLOBAL_NUM_BUCKETS];
     QSpinBox* mpHi[GLOBAL_NUM_BUCKETS];

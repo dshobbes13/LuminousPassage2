@@ -34,6 +34,11 @@
 
 #define BASS_PULSE_NUM          10
 
+#ifdef SOFTWARE
+void cli( void );
+void sei( void );
+#endif
+
 //*****************
 // VARIABLES
 //*****************
@@ -57,6 +62,9 @@ volatile static quint8 mEffects[Effect_MAX] = {0};
 
 volatile static quint16 mTick = 0;
 volatile static quint16 mLastTick[Effect_MAX] = {0};
+
+// Effect_MANUAL
+volatile static quint8 mManualValue = 0;
 
 // Effect_CYCLE
 volatile static quint8 mCycleCount = 0;
@@ -98,11 +106,11 @@ void PatternInit( void )
         }
     }
 
-#if defined( PATTERN_BLOCKING_VERSION ) && defined ( FIRMWARE )
+#if defined( PATTERN_BLOCKING_VERSION ) && !defined ( SOFTWARE )
     mLastPatternTime = millis();
 #endif
 
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+#ifndef SOFTWARE
     // Start TIMER2 for interrupting at 100Hz (10ms), tick time
     TCCR2A = 0x02;
     TCCR2B = 0x06;
@@ -118,9 +126,7 @@ void PatternInit( void )
 
 void PatternSetEffect( eEffect effect, quint8 on )
 {
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     cli();
-#endif
     mEffects[effect] = on;
     switch( effect )
     {
@@ -134,9 +140,14 @@ void PatternSetEffect( eEffect effect, quint8 on )
     default:
         break;
     }
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     sei();
-#endif
+}
+
+void PatternSetManual( quint8 value )
+{
+    cli();
+    mManualValue = value;
+    sei();
 }
 
 quint8 PatternReady( void )
@@ -146,24 +157,20 @@ quint8 PatternReady( void )
 
 void PatternData( quint8* data )
 {
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     cli();
-#endif
     for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
     {
         quint16 value = mPatternChannels[i];
         data[i] = ( value < 0xFF ) ? value : 0xFF;
     }
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     sei();
-#endif
 
     mPatternReady = 0;
 }
 
 void PatternProcess( void )
 {
-#if defined( PATTERN_BLOCKING_VERSION ) && defined( FIRMWARE )
+#if defined( PATTERN_BLOCKING_VERSION ) && !defined( SOFTWARE )
     if( ( micros() - mLastPatternTime ) >= 10000 )
     {
         mLastPatternTime += 10000;
@@ -171,34 +178,26 @@ void PatternProcess( void )
     }
 #endif
 
-#if defined( SOFTWARE )
+#ifdef SOFTWARE
     PatternProcessInternal();
 #endif
 }
 
 void PatternUpdateFreq( quint8* newFrequencies )
 {
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     cli();
-#endif
-
     // Filter for noise
     for( quint8 i=0; i<GLOBAL_NUM_FREQ; i++ )
     {
         quint8 value = newFrequencies[i];
         mPatternFrequencies[i] = ( value > 0x02 ) ? ( value - 0x02 ) : 0x00;
     }
-
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     sei();
-#endif
 }
 
 void PatternUpdateBuckets( quint16* newBuckets, quint16* newBucketAverages )
 {
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     cli();
-#endif
 
     for( quint8 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
     {
@@ -240,23 +239,15 @@ void PatternUpdateBuckets( quint16* newBuckets, quint16* newBucketAverages )
         }
     }
 
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     sei();
-#endif
 }
 
 void PatternUpdateAd( quint8 mean, quint8 peak )
 {
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     cli();
-#endif
-
     mRawMean = mean;
     mRawPeak = peak;
-
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
     sei();
-#endif
 }
 
 void PatternProcessInternal( void )
@@ -271,28 +262,10 @@ void PatternProcessInternal( void )
 
     if( mEffects[Effect_MANUAL] )
     {
-        // if( mCommandReceived )
-        // {
-        //     if( mCommand == 'u' )
-        //     {
-        //         mSweepValue += 0x08;
-        //         for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
-        //         {
-        //             mPatternChannels[i] += mSweepValue;
-        //         }
-        //     }
-        //     else if( mCommand == 'd' )
-        //     {
-        //         mSweepValue -= 0x08;
-        //         for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
-        //         {
-        //             mPatternChannels[i] += mSweepValue;
-        //         }
-        //     }
-        //     else
-        //     {
-        //     }
-        // }
+        for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
+        {
+            mPatternChannels[i] = mManualValue;
+        }
     }
 
     if( mEffects[Effect_CYCLE] )
@@ -386,7 +359,7 @@ void PatternProcessInternal( void )
 
 }
 
-#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+#if defined( PATTERN_ISR_VERSION ) && !defined( SOFTWARE )
 ISR( TIMER2_COMPA_vect )
 {
     if( ++mInterruptCount >= 5 )
@@ -400,5 +373,14 @@ ISR( TIMER2_COMPA_vect )
     DebugDown();
 #endif
     }
+}
+#endif
+
+#ifdef SOFTWARE
+void cli( void )
+{
+}
+void sei( void )
+{
 }
 #endif

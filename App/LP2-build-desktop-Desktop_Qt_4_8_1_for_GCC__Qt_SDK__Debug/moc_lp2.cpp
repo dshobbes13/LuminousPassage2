@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'LP2.h'
 **
-** Created: Wed Aug 1 21:27:31 2012
+** Created: Wed Aug 1 22:07:58 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_cLP2[] = {
        6,       // revision
        0,       // classname
        0,    0, // classinfo
-      11,   14, // methods
+      12,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -39,11 +39,12 @@ static const uint qt_meta_data_cLP2[] = {
       52,    5,    5,    5, 0x08,
       59,    6,    5,    5, 0x08,
       88,    5,    5,    5, 0x08,
-     104,    5,    5,    5, 0x08,
-     122,    5,    5,    5, 0x08,
-     138,    5,    5,    5, 0x08,
-     170,  160,    5,    5, 0x08,
-     200,  194,    5,    5, 0x08,
+     115,  104,    5,    5, 0x08,
+     145,    5,    5,    5, 0x08,
+     163,    5,    5,    5, 0x08,
+     179,    5,    5,    5, 0x08,
+     211,  201,    5,    5, 0x08,
+     241,  235,    5,    5, 0x08,
 
        0        // eod
 };
@@ -52,10 +53,12 @@ static const char qt_meta_stringdata_cLP2[] = {
     "cLP2\0\0message\0NewMessage(QByteArray)\0"
     "Open()\0Close()\0Read()\0"
     "HandleNewMessage(QByteArray)\0"
-    "HandleTimeout()\0UpdateThreshold()\0"
-    "UpdateBuckets()\0HandleBucketSliders()\0"
-    "averaging\0UpdateAveraging(double)\0"
-    "pItem\0HandleEffectClicked(QListWidgetItem*)\0"
+    "HandleTimeout()\0newPattern\0"
+    "HandleUpdatedPattern(quint8*)\0"
+    "UpdateThreshold()\0UpdateBuckets()\0"
+    "HandleBucketSliders()\0averaging\0"
+    "UpdateAveraging(double)\0pItem\0"
+    "HandleEffectClicked(QListWidgetItem*)\0"
 };
 
 void cLP2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
@@ -70,11 +73,12 @@ void cLP2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void *
         case 3: _t->Read(); break;
         case 4: _t->HandleNewMessage((*reinterpret_cast< QByteArray(*)>(_a[1]))); break;
         case 5: _t->HandleTimeout(); break;
-        case 6: _t->UpdateThreshold(); break;
-        case 7: _t->UpdateBuckets(); break;
-        case 8: _t->HandleBucketSliders(); break;
-        case 9: _t->UpdateAveraging((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 10: _t->HandleEffectClicked((*reinterpret_cast< QListWidgetItem*(*)>(_a[1]))); break;
+        case 6: _t->HandleUpdatedPattern((*reinterpret_cast< quint8*(*)>(_a[1]))); break;
+        case 7: _t->UpdateThreshold(); break;
+        case 8: _t->UpdateBuckets(); break;
+        case 9: _t->HandleBucketSliders(); break;
+        case 10: _t->UpdateAveraging((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 11: _t->HandleEffectClicked((*reinterpret_cast< QListWidgetItem*(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -112,9 +116,9 @@ int cLP2::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 11)
+        if (_id < 12)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 11;
+        _id -= 12;
     }
     return _id;
 }

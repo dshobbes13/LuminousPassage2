@@ -24,6 +24,7 @@
 #include "SerialDevice.h"
 #include "Fft.h"
 #include "Lights.h"
+#include "PatternThread.h"
 
 #include "audio.h"
 
@@ -178,9 +179,14 @@ cLP2::cLP2( QWidget* pParent )
 
     mpSerial = NULL;
 
+    /*
     QTimer* pTimer = new QTimer( this );
     connect( pTimer, SIGNAL( timeout() ), this, SLOT( HandleTimeout() ) );
     pTimer->start( 10 );
+    */
+    mpPatternThread = new cPatternThread( this );
+    connect( mpPatternThread, SIGNAL( UpdatedPattern( quint8* ) ), this, SLOT( HandleUpdatedPattern( quint8* ) ) );
+    mpPatternThread->start();
 
     connect( mpOpenButton, SIGNAL( clicked() ), this, SLOT( Open() ) );
     connect( mpCloseButton, SIGNAL( clicked() ), this, SLOT( Close() ) );
@@ -191,6 +197,9 @@ cLP2::cLP2( QWidget* pParent )
 
 cLP2::~cLP2()
 {
+    mpPatternThread->Stop();
+    mpPatternThread->quit();
+    mpPatternThread->wait();
 }
 
 void cLP2::Open( void )
@@ -328,6 +337,7 @@ void cLP2::HandleBucketSliders( void )
 
 void cLP2::HandleTimeout( void )
 {
+    /*
     PatternProcess();
     quint8 newData[GLOBAL_NUM_CHANNELS];
     PatternData( newData );
@@ -335,6 +345,17 @@ void cLP2::HandleTimeout( void )
     for( qint32 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
     {
         vData.append( newData[i] );
+    }
+    mpLights->UpdateData( vData );
+    */
+}
+
+void cLP2::HandleUpdatedPattern( quint8* newPattern )
+{
+    QVector<quint8> vData;
+    for( qint32 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
+    {
+        vData.append( newPattern[i] );
     }
     mpLights->UpdateData( vData );
 }

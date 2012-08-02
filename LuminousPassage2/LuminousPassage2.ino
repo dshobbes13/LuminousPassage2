@@ -137,6 +137,12 @@ void loop( void )
                 PatternSetEffect( (eEffect)effect, flag );
             }
             break;
+        case Command_MANUAL:
+            {
+                quint8 value = ComGetByte( 0 );
+                PatternSetManual( value );
+            }
+            break;
         default:
             break;
         }

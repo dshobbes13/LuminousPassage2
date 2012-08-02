@@ -16,6 +16,7 @@ enum eCommand
 {
     Command_NULL    = 0,
     Command_EFFECT  = 1,    // { Byte1 = Effect, Byte2 = On/Off }
+    Command_MANUAL  = 2,    // { Byte1 = Value }
 };
 
 //*****************

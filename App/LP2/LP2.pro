@@ -17,7 +17,8 @@ SOURCES += main.cpp\
     LP2.cpp \
     ../../LuminousPassage2/pattern.cpp \
     ../../LuminousPassage2/audio.cpp \
-    Lights.cpp
+    Lights.cpp \
+    PatternThread.cpp
 
 HEADERS  += \
     SerialDevice.h \
@@ -27,7 +28,8 @@ HEADERS  += \
     ../../LuminousPassage2/pattern.h \
     ../../LuminousPassage2/global.h \
     ../../LuminousPassage2/audio.h \
-    Lights.h
+    Lights.h \
+    PatternThread.h
 
 DEFINES += SOFTWARE
 
