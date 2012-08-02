@@ -5,7 +5,10 @@
 //*****************
 
 #include "ad.h"
+#include "audio.h"
+#include "com.h"
 #include "comMaster.h"
+#include "comSlave.h"
 #include "config.h"
 #include "fft.h"
 #include "global.h"
@@ -18,7 +21,7 @@
 // DEFINITIONS
 //*****************
 
-#define DEBUG
+//#define DEBUG
 
 
 //*****************
@@ -40,8 +43,6 @@ static unsigned char mAdOffset = 128;
 
 static unsigned long mFftCount = 0;
 
-static unsigned long mLastPatternTime = 0;
-
 static unsigned char mNewFft = 0;
 static unsigned char mUpdatePwm = 0;
 
@@ -52,15 +53,14 @@ static unsigned char mUpdatePwm = 0;
 
 void setup( void )
 {
-    // Init serial port for debugging
-    Serial.begin( 115200 );
-    while( !Serial );
-
     // Init modules
+    ComInit();
+
 #if defined( MASTER_SINGLE ) || defined( MASTER )
     AdInit();
     PatternInit();
     ComMasterInit();
+    AudioInit();
 #endif
 
 #if !defined( MASTER )
@@ -73,8 +73,6 @@ void setup( void )
 
     //TestFft();
     //while(1);
-
-    mLastPatternTime = micros();
 
 #ifdef DEBUG
     DebugInit();
@@ -127,21 +125,20 @@ void loop( void )
     }
 
     // Check for any new commands
-    if( Serial.available() )
+    if( ComProcess() )
     {
-        unsigned int command = Serial.read();
-        unsigned char byteCommand = (quint8)command;
-        if( ( byteCommand >= '0' ) && ( byteCommand <= '9' ) )
+        eCommand command = ComGetCommand();
+        switch( command )
         {
-            eEffect effect = (eEffect)( byteCommand - '0' );
-            if( PatternGetEffect( effect ) )
+        case Command_EFFECT:
             {
-                PatternSetEffect( effect, false );
+                quint8 effect = ComGetByte( 0 );
+                quint8 flag = ComGetByte( 1 );
+                PatternSetEffect( (eEffect)effect, flag );
             }
-            else
-            {
-                PatternSetEffect( effect, true );
-            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -159,10 +156,13 @@ void loop( void )
         {
             mFftCount = 0;
 
-            PatternUpdateAd( mAdMean, mAdPeak );
-            PatternUpdateFreq( mFftSum );
+            AudioUpdateFreq( mFftSum );
 
-            //PrintDataCharRaw( mFftSum, GLOBAL_NUM_FREQ );
+            PatternUpdateFreq( mFftSum );
+            PatternUpdateAd( mAdMean, mAdPeak );
+            PatternUpdateBuckets( AudioBuckets(), AudioBucketAverages() );
+
+            ComSendFft( mFftSum );
 
             for( unsigned char i=0; i<GLOBAL_NUM_FREQ; i ++ )
             {
@@ -172,27 +172,20 @@ void loop( void )
         }
     }
 
-    // Give pattern generator processing time
-    if( ( micros() - mLastPatternTime ) >= 10000 )
+    PatternProcess();
+    if( PatternReady() )
     {
-#ifdef DEBUG
-        DebugUp();
-#endif
-        mLastPatternTime += 10000;
-        PatternProcess();
-        memcpy( mPwmValues, PatternData(), GLOBAL_NUM_CHANNELS );
+        PatternData( mPwmValues );
         mUpdatePwm = 1;
-#ifdef DEBUG
-        DebugDown();
-#endif
     }
 
-#else   // SLAVE
+#else // SLAVE
 
     // Check for new data over i2c
-    if( 0 )//newData )
+    ComSlaveProcess();
+    if( ComSlaveReady() )
     {
-        // GetData
+        ComSlaveData( mPwmValues );
         mUpdatePwm = 1;
     }
 
@@ -225,40 +218,38 @@ void loop( void )
 
         /*
         // Analog audio
-        Serial.print( F(" AdPeak=") );
-        Serial.print( mAdPeak );
-        Serial.print( F(" AdMean=") );
-        Serial.print( mAdMean );
-        Serial.print( F(" AdOffset=") );
-        Serial.print( mAdOffset );
-        Serial.print( F(" FftCounts=") );
-        Serial.print( mFftCount );
+        ComPrint( F(" AdPeak=") );
+        ComPrintUchar( mAdPeak );
+        ComPrint( F(" AdMean=") );
+        ComPrintUchar( mAdMean );
+        ComPrint( F(" AdOffset=") );
+        ComPrintUchar( mAdOffset );
+        ComPrint( F(" FftCounts=") );
+        ComPrintUchar( mFftCount );
         */
 
         /*
-        Serial.print( F(" AD Samples: ") );
+        ComPrint( F(" AD Samples: ") );
         for( int i=0; i<32; i++ )
         {
             if( mAdSamples[i] < 16 )
             {
-                Serial.write( '0' );
-                Serial.print( mAdSamples[i], HEX );
+                ComPrintUchar( (unsigned char)'0' );
+                ComPrintHex( mAdSamples[i] );
             }
             else
             {
-                Serial.print( mAdSamples[i], HEX );
+                ComPrintHex( mAdSamples[i] );
             }
-            Serial.print( "::" );
+            ComPrint( "::" );
         }
-        Serial.print( "\n\r" );
+        ComPrint( "\n\r" );
         */
 
         /*
-        PrintDataUint( " FFT:", mFftMag, 11 );
-        //PrintDataUint( " FFT4:", mFftFourBuckets, 4 );
-        Serial.print( "\n\r" );
-
-        mFftCount = 0;
+        ComPrintDataUint( " FFT:", mFftMag, 11 );
+        //ComPrintDataUint( " FFT4:", mFftFourBuckets, 4 );
+        ComPrint( "\n\r" );
         */
     }
 #endif

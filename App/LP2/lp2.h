@@ -15,14 +15,18 @@
 #include <QStringList>
 
 #include "global.h"
+#include "pattern.h"
 
+class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
 class QElapsedTimer;
 class QLabel;
 class QListWidget;
+class QListWidgetItem;
 class QProgressBar;
 class QPushButton;
+class QSlider;
 class QSpinBox;
 
 class cFft;
@@ -58,10 +62,12 @@ private slots:
     void HandleTimeout( void );
     void UpdateThreshold( void );
     void UpdateBuckets( void );
+    void HandleBucketSliders( void );
     void UpdateAveraging( double averaging );
-    void HandleEffect( void );
+    void HandleEffectClicked( QListWidgetItem* pItem );
 
 private:
+    QString GetEffectName( eEffect effect );
     void AddMessage( QString message );
 
     QComboBox* mpSerialPorts;
@@ -70,10 +76,12 @@ private:
 
     QStringList mFftLabels;
     cFft* mpFft;
+
+    QCheckBox* mpSimulateBucketsCheck;
+    QSlider* mpBucketSliders[GLOBAL_NUM_BUCKETS];
     cFft* mpBuckets;
 
-    QComboBox* mpEffects;
-    QPushButton* mpToggleEffect;
+    QListWidget* mpEffects;
     cLights* mpLights;
 
     QSpinBox* mpLo[GLOBAL_NUM_BUCKETS];

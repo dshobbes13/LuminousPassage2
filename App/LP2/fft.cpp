@@ -186,8 +186,12 @@ void cFft::paintEvent( QPaintEvent* pEvent )
         painter.setBrush( QBrush() );
         painter.setPen( QPen( QBrush( Qt::black ), 5 ) );
         painter.drawLine( x + barOffset, avgY, x + barOffset + barWidth, avgY );
+
+        QRect textRect1( x + barOffset,  0, barWidth, 15 );
+        QRect textRect2( x + barOffset, 15, barWidth, 15 );
         painter.setPen( QPen( QBrush( Qt::black ), 3 ) );
-        painter.drawText( barRect, QString::number( mPeak.at(i) ) );
+        painter.drawText( textRect1, Qt::AlignHCenter | Qt::AlignVCenter, QString::number( mPeak.at(i) ) );
+        painter.drawText( textRect2, Qt::AlignHCenter | Qt::AlignVCenter, QString::number( avgValue ) );
     }
 
     painter.end();

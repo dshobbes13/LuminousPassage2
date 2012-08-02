@@ -10,10 +10,11 @@
 
 #include <Arduino.h>
 
+#include "com.h"
+#include "config.h"
 #include "utility.h"
 
 #else
-
 
 #endif
 
@@ -23,56 +24,58 @@
 // DEFINITIONS
 //*****************
 
-//#define DEBUG
+#ifdef FIRMWARE
+#define DEBUG
+#endif
 
+#define MAX_SIMULTANEOUS        4
+
+#define MIN_BUCKET_THRESHOLD    50
+
+#define BASS_PULSE_NUM          10
 
 //*****************
 // VARIABLES
 //*****************
 
-static quint16 mPatternChannels[GLOBAL_NUM_CHANNELS];
-static quint8 mPatternChannelsNormalized[GLOBAL_NUM_CHANNELS];
+volatile static quint16 mPatternChannels[GLOBAL_NUM_CHANNELS] = {0};
 
-static quint8 mNewFrequencies = 0;
-static quint8 mPatternFrequencies[GLOBAL_NUM_FREQ] = {0};
+volatile static quint8 mInterruptCount = 0;
 
-static quint8 mNewBuckets = 0;
-static quint16 mPatternBuckets[GLOBAL_NUM_BUCKETS] = {0};
-static quint16 mPatternBucketAverages[GLOBAL_NUM_BUCKETS] = {0};
+volatile static quint8 mPatternReady = 0;
+volatile static quint32 mLastPatternTime = 0;
 
-static quint8 mNewRaw = 0;
-static quint8 mRawMean = 128;
-static quint8 mRawPeak = 128;
+volatile static quint8 mPatternFrequencies[GLOBAL_NUM_FREQ] = {0};
 
-static quint8 mEffects[Effect_MAX] = {0};
+volatile static quint16 mPatternBuckets[GLOBAL_NUM_BUCKETS] = {0};
+volatile static quint16 mPatternBucketAverages[GLOBAL_NUM_BUCKETS] = {0};
 
-static quint16 mTick = 0;
-static quint16 mLastTick[Effect_MAX] = {0};
+volatile static quint8 mRawMean = 128;
+volatile static quint8 mRawPeak = 128;
+
+volatile static quint8 mEffects[Effect_MAX] = {0};
+
+volatile static quint16 mTick = 0;
+volatile static quint16 mLastTick[Effect_MAX] = {0};
 
 // Effect_CYCLE
-static quint8 mCycleCount = 0;
+volatile static quint8 mCycleCount = 0;
 
 // Effect_BREATH
-static quint8 mSweepState = 1;
-static quint8 mSweepValue = 0;
+volatile static quint8 mSweepState = 1;
+volatile static quint8 mSweepValue = 0;
 
-// Effect_BUCKETS
-static quint8 mBucketState[GLOBAL_NUM_BUCKETS];
-static quint16 mBucketThreshold = 0x10;
-
-static quint8 mDigitalInput1 = 0;
-static quint8 mDigitalTicks1 = 0;
-
-static quint8 mDigitalInput2 = 0;
-static quint8 mDigitalTicks2 = 0;
-
+// Buckets to digital inputs
+volatile static quint8 mBucketState[GLOBAL_NUM_BUCKETS] = {0};
+volatile static float mBucketThreshold = 0.20;
+volatile static quint8 mDigitalBucketInput[GLOBAL_NUM_BUCKETS][MAX_SIMULTANEOUS];
+volatile static quint8 mDigitalBucketTicks[GLOBAL_NUM_BUCKETS][MAX_SIMULTANEOUS];
 
 //*****************
 // PRIVATE PROTOTYPES
 //*****************
 
-quint8 WaveAtTick( quint8 tick );
-quint8 Abs( quint8 value );
+void PatternProcessInternal( void );
 
 
 //*****************
@@ -85,20 +88,180 @@ void PatternInit( void )
     {
         mPatternChannels[i] = 0x0A;
     }
+
+    for( quint8 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        for( quint8 j=0; j<MAX_SIMULTANEOUS; j++ )
+        {
+            mDigitalBucketInput[i][j] = 0;
+            mDigitalBucketTicks[i][j] = 0;
+        }
+    }
+
+#if defined( PATTERN_BLOCKING_VERSION ) && defined ( FIRMWARE )
+    mLastPatternTime = millis();
+#endif
+
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    // Start TIMER2 for interrupting at 100Hz (10ms), tick time
+    TCCR2A = 0x02;
+    TCCR2B = 0x06;
+    TCNT2 = 0x00;
+    OCR2A = 125;
+    TIMSK2 = 0x02;
+#endif
+
+#ifdef DEBUG
+    DebugInit();
+#endif
 }
 
-void PatternSetEffect( eEffect effect, bool on )
+void PatternSetEffect( eEffect effect, quint8 on )
 {
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    cli();
+#endif
     mEffects[effect] = on;
+    switch( effect )
+    {
+    case Effect_CYCLE:
+        mCycleCount = 0;
+        break;
+    case Effect_BREATH:
+        mSweepState = 0;
+        mSweepValue = 0;
+        break;
+    default:
+        break;
+    }
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    sei();
+#endif
 }
 
-quint8 PatternGetEffect( eEffect effect )
+quint8 PatternReady( void )
 {
-    return mEffects[effect];
+    return mPatternReady;
+}
+
+void PatternData( quint8* data )
+{
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    cli();
+#endif
+    for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
+    {
+        quint16 value = mPatternChannels[i];
+        data[i] = ( value < 0xFF ) ? value : 0xFF;
+    }
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    sei();
+#endif
+
+    mPatternReady = 0;
 }
 
 void PatternProcess( void )
 {
+#if defined( PATTERN_BLOCKING_VERSION ) && defined( FIRMWARE )
+    if( ( micros() - mLastPatternTime ) >= 10000 )
+    {
+        mLastPatternTime += 10000;
+        PatternProcessInternal();
+    }
+#endif
+
+#if defined( SOFTWARE )
+    PatternProcessInternal();
+#endif
+}
+
+void PatternUpdateFreq( quint8* newFrequencies )
+{
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    cli();
+#endif
+
+    // Filter for noise
+    for( quint8 i=0; i<GLOBAL_NUM_FREQ; i++ )
+    {
+        quint8 value = newFrequencies[i];
+        mPatternFrequencies[i] = ( value > 0x02 ) ? ( value - 0x02 ) : 0x00;
+    }
+
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    sei();
+#endif
+}
+
+void PatternUpdateBuckets( quint16* newBuckets, quint16* newBucketAverages )
+{
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    cli();
+#endif
+
+    for( quint8 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        mPatternBuckets[i] = newBuckets[i];
+        mPatternBucketAverages[i] = newBucketAverages[i];
+    }
+
+    // Filter for any digital inputs
+    for( quint8 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        quint16 value = mPatternBuckets[i];
+        quint16 avg = mPatternBucketAverages[i];
+        quint16 hi = avg * ( 1.0 + mBucketThreshold );
+        quint16 lo = avg * ( 1.0 - mBucketThreshold );
+        if( mBucketState[i] )
+        {
+            if( ( value < lo ) || ( avg < MIN_BUCKET_THRESHOLD ) )
+            {
+                mBucketState[i] = 0;
+            }
+        }
+        else
+        {
+            if( ( value > hi ) && ( avg > MIN_BUCKET_THRESHOLD ) )
+            {
+                mBucketState[i] = 1;
+
+                // Find open digital input
+                for( quint8 j=0; j<MAX_SIMULTANEOUS; j++ )
+                {
+                    if( !mDigitalBucketInput[i][j] )
+                    {
+                        mDigitalBucketInput[i][j] = 1;
+                        mDigitalBucketTicks[i][j] = 0;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    sei();
+#endif
+}
+
+void PatternUpdateAd( quint8 mean, quint8 peak )
+{
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    cli();
+#endif
+
+    mRawMean = mean;
+    mRawPeak = peak;
+
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+    sei();
+#endif
+}
+
+void PatternProcessInternal( void )
+{
+    mPatternReady = 1;
     mTick++;
 
     for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
@@ -181,11 +344,11 @@ void PatternProcess( void )
         quint16 one = mPatternBuckets[0];
         quint16 two = mPatternBuckets[1];
 
-        for( quint8 i=0; i<40; i++ )
+        for( quint8 i=0; i<10; i++ )
         {
             mPatternChannels[i] += one;
         }
-        for( quint8 i=40; i<59; i++ )
+        for( quint8 i=10; i<20; i++ )
         {
             mPatternChannels[i] += two;
         }
@@ -193,160 +356,49 @@ void PatternProcess( void )
 
     if( mEffects[Effect_BASS_PULSE] )
     {
-        if( ( mTick - mLastTick[Effect_BASS_PULSE] >= 1 ) && ( mDigitalInput1 || mDigitalInput2 ) )
+        if( mTick - mLastTick[Effect_BASS_PULSE] >= 5 )
         {
             mLastTick[Effect_BASS_PULSE] = mTick;
-            if( mDigitalInput1 )
+            for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
             {
-                if( ++mDigitalTicks1 > 11 )
+                if( mDigitalBucketInput[1][i] )
                 {
-                    mDigitalTicks1 = 0;
-                    mDigitalInput1 = 0;
-                }
-            }
-            if( mDigitalInput2 )
-            {
-                if( ++mDigitalTicks2 > 11 )
-                {
-                    mDigitalTicks2 = 0;
-                    mDigitalInput2 = 0;
+                    if( ++mDigitalBucketTicks[1][i] > ( BASS_PULSE_NUM + 1 ) )
+                    {
+                        mDigitalBucketTicks[1][i] = 0;
+                        mDigitalBucketInput[1][i] = 0;
+                    }
                 }
             }
         }
 
-        if( mDigitalInput1 )
+        for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
         {
-            mPatternChannels[0] += ( mDigitalTicks1 == 0 || mDigitalTicks1 == 1 ) ? 0x7F : 0x00;
-            mPatternChannels[1] += ( mDigitalTicks1 == 1 || mDigitalTicks1 == 2 ) ? 0x7F : 0x00;
-            mPatternChannels[2] += ( mDigitalTicks1 == 2 || mDigitalTicks1 == 3 ) ? 0x7F : 0x00;
-            mPatternChannels[3] += ( mDigitalTicks1 == 3 || mDigitalTicks1 == 4 ) ? 0x7F : 0x00;
-            mPatternChannels[4] += ( mDigitalTicks1 == 4 || mDigitalTicks1 == 5 ) ? 0x7F : 0x00;
-            mPatternChannels[5] += ( mDigitalTicks1 == 5 || mDigitalTicks1 == 6 ) ? 0x7F : 0x00;
-            mPatternChannels[6] += ( mDigitalTicks1 == 6 || mDigitalTicks1 == 7 ) ? 0x7F : 0x00;
-            mPatternChannels[7] += ( mDigitalTicks1 == 7 || mDigitalTicks1 == 8 ) ? 0x7F : 0x00;
-            mPatternChannels[8] += ( mDigitalTicks1 == 8 || mDigitalTicks1 == 9 ) ? 0x7F : 0x00;
-            mPatternChannels[9] += ( mDigitalTicks1 == 9 || mDigitalTicks1 == 10 ) ? 0x7F : 0x00;
-        }
-
-        if( mDigitalInput2 )
-        {
-            mPatternChannels[0] += ( mDigitalTicks2 == 0 || mDigitalTicks2 == 1 ) ? 0x7F : 0x00;
-            mPatternChannels[1] += ( mDigitalTicks2 == 1 || mDigitalTicks2 == 2 ) ? 0x7F : 0x00;
-            mPatternChannels[2] += ( mDigitalTicks2 == 2 || mDigitalTicks2 == 3 ) ? 0x7F : 0x00;
-            mPatternChannels[3] += ( mDigitalTicks2 == 3 || mDigitalTicks2 == 4 ) ? 0x7F : 0x00;
-            mPatternChannels[4] += ( mDigitalTicks2 == 4 || mDigitalTicks2 == 5 ) ? 0x7F : 0x00;
-            mPatternChannels[5] += ( mDigitalTicks2 == 5 || mDigitalTicks2 == 6 ) ? 0x7F : 0x00;
-            mPatternChannels[6] += ( mDigitalTicks2 == 6 || mDigitalTicks2 == 7 ) ? 0x7F : 0x00;
-            mPatternChannels[7] += ( mDigitalTicks2 == 7 || mDigitalTicks2 == 8 ) ? 0x7F : 0x00;
-            mPatternChannels[8] += ( mDigitalTicks2 == 8 || mDigitalTicks2 == 9 ) ? 0x7F : 0x00;
-            mPatternChannels[9] += ( mDigitalTicks2 == 9 || mDigitalTicks2 == 10 ) ? 0x7F : 0x00;
-        }
-    }
-}
-
-quint8* PatternData( void )
-{
-    for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
-    {
-        quint16 value = mPatternChannels[i];
-        mPatternChannelsNormalized[i] = ( value <= 0xFF ) ? value : 0xFF;
-    }
-    return mPatternChannelsNormalized;
-}
-
-void PatternUpdateFreq( quint8* newFrequencies )
-{
-    mNewFrequencies = 1;
-
-    // Filter for noise
-    for( quint8 i=0; i<GLOBAL_NUM_FREQ; i++ )
-    {
-        quint8 value = newFrequencies[i];
-        mPatternFrequencies[i] = ( value > 0x02 ) ? ( value - 0x02 ) : 0x00;
-    }
-}
-
-void PatternUpdateBuckets( quint16* newBuckets, quint16* newBucketAverages )
-{
-    mNewBuckets = 1;
-
-    for( quint8 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
-    {
-        mPatternBuckets[i] = newBuckets[i];
-        mPatternBucketAverages[i] = newBucketAverages[i];
-    }
-
-    // Filter for any digital inputs
-    quint16 analog1 = mPatternBuckets[2];
-    quint16 thresh1 = mPatternBucketAverages[2];
-    if( mBucketState[0] )
-    {
-        if( analog1 < thresh1 )
-        {
-            mBucketState[0] = 0;
-        }
-    }
-    else
-    {
-        if( analog1 > thresh1 )
-        {
-            // New digital input
-            mBucketState[0] = 1;
-
-            if( !mDigitalInput1 )
+            if( mDigitalBucketInput[1][i] )
             {
-                mDigitalInput1 = 1;
-                mDigitalTicks1 = 0;
-            }
-            else if( !mDigitalInput2 )
-            {
-                mDigitalInput2 = 1;
-                mDigitalTicks2 = 0;
-            }
-            else
-            {
+                for( quint8 j=0; j<BASS_PULSE_NUM; j++ )
+                {
+                    mPatternChannels[j] += ( mDigitalBucketTicks[1][i] == j || mDigitalBucketTicks[1][i] == (j+1) ) ? 0x7F : 0x00;
+                }
             }
         }
     }
+
 }
 
-void PatternUpdateAd( quint8 mean, quint8 peak )
+#if defined( PATTERN_ISR_VERSION ) && defined( FIRMWARE )
+ISR( TIMER2_COMPA_vect )
 {
-    mNewRaw = 1;
-
-    mRawMean = mean;
-    mRawPeak = peak;
-}
-
-quint8 WaveAtTick( quint8 tick )
-{
-    quint8 value = 0;
-    switch( tick )
+    if( ++mInterruptCount >= 5 )
     {
-    case 0:
-        value = 0x3F;
-        break;
-    case 1:
-        value = 0x7F;
-        break;
-    case 2:
-        value = 0x3F;
-        break;
-    default:
-        break;
-    }
-    return value;
-}
-
-quint8 Abs( quint8 value )
-{
-    if( value >= 128 )
-    {
-        return value - 128;
-    }
-    else
-    {
-        return 128 - value;
+#ifdef DEBUG
+    DebugUp();
+#endif
+        PatternProcessInternal();
+        mInterruptCount = 0;
+#ifdef DEBUG
+    DebugDown();
+#endif
     }
 }
-
+#endif

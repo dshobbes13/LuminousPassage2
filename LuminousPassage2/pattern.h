@@ -18,6 +18,10 @@
 // DEFINITIONS
 //*****************
 
+//#define PATTERN_BLOCKING_VERSION
+#define PATTERN_ISR_VERSION
+
+
 enum eEffect
 {
     Effect_NULL       = 0,
@@ -37,13 +41,13 @@ enum eEffect
 
 void PatternInit( void );
 
-void PatternSetEffect( eEffect effect, bool on = true );
+void PatternSetEffect( eEffect effect, quint8 on );
 
-quint8 PatternGetEffect( eEffect effect );
+quint8 PatternReady( void );
+
+void PatternData( quint8* data );
 
 void PatternProcess( void );
-
-quint8* PatternData( void );
 
 void PatternUpdateFreq( quint8* newFrequencies );
 

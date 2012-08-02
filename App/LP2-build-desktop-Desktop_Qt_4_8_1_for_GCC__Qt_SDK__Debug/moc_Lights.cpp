@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'Lights.h'
 **
-** Created: Sun Jul 29 11:19:46 2012
+** Created: Wed Aug 1 21:27:32 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!

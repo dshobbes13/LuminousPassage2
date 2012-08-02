@@ -37,8 +37,8 @@ static quint8 mHi[GLOBAL_NUM_BUCKETS] = {0};
 static quint8 mFreqAverages[GLOBAL_NUM_FREQ] = {0};
 static quint16 mBucketAverages[GLOBAL_NUM_BUCKETS] = {0};
 
-static quint8 mThreshold = 8;
-static float mAveraging = 0.9;
+static quint8 mThreshold= 0;
+static float mAveraging = 0;
 
 
 //*****************
@@ -52,6 +52,20 @@ static float mAveraging = 0.9;
 
 void AudioInit( void )
 {
+    mThreshold = 8;
+    mAveraging = 0.9;
+    mLo[0] = 1;
+    mHi[0] = 2;
+    mLo[1] = 3;
+    mHi[1] = 4;
+    mLo[2] = 5;
+    mHi[2] = 8;
+    mLo[3] = 9;
+    mHi[3] = 16;
+    mLo[4] = 17;
+    mHi[4] = 32;
+    mLo[5] = 33;
+    mHi[5] = 63;
 }
 
 void AudioUpdateThreshold( quint8 threshold )

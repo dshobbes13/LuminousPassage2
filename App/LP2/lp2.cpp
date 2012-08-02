@@ -6,6 +6,7 @@
 
 #include "lp2.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
 #include <QDoubleSpinBox>
@@ -17,13 +18,14 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTimer>
+#include <QThread>
+#include <QTreeWidget>
 
 #include "SerialDevice.h"
 #include "Fft.h"
 #include "Lights.h"
 
 #include "audio.h"
-#include "pattern.h"
 
 
 //******************
@@ -82,6 +84,14 @@ cLP2::cLP2( QWidget* pParent )
     bucketLabels << "1" << "2" << "3" << "4" << "5" << "6";
     mpBuckets = new cFft( GLOBAL_NUM_BUCKETS, 512, bucketLabels, this );
 
+    mpSimulateBucketsCheck = new QCheckBox( "Simulate Buckets", this );
+    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        mpBucketSliders[i] = new QSlider( Qt::Horizontal, this );
+        mpBucketSliders[i]->setRange( 0, 512 );
+        connect( mpBucketSliders[i], SIGNAL( valueChanged( int ) ), this, SLOT( HandleBucketSliders() ) );
+    }
+
     for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
     {
         mpLo[i] = new QSpinBox( this );
@@ -123,42 +133,48 @@ cLP2::cLP2( QWidget* pParent )
 
     mpLabel = new QLabel( "Avg Message Rate - " );
 
-    mpEffects = new QComboBox( this );
-    mpEffects->addItem( "MANUAL",     Effect_MANUAL );
-    mpEffects->addItem( "CYCLE",      Effect_CYCLE );
-    mpEffects->addItem( "BREATH",     Effect_BREATH );
-    mpEffects->addItem( "FREQ",       Effect_FREQ );
-    mpEffects->addItem( "BUCKETS",    Effect_BUCKETS );
-    mpEffects->addItem( "BASS_PULSE", Effect_BASS_PULSE );
-    mpToggleEffect = new QPushButton( "Toggle Effect" );
+    mpEffects = new QListWidget( this );
+    mpEffects->setSelectionMode( QAbstractItemView::MultiSelection );
+    for( qint32 i=1; i<Effect_MAX; i++ )
+    {
+        QListWidgetItem* pItem = new QListWidgetItem( GetEffectName( (eEffect)i ) );
+        pItem->setData( Qt::UserRole, i );
+        mpEffects->addItem( pItem );
+    }
     mpLights = new cLights( GLOBAL_NUM_CHANNELS, this );
-    connect( mpToggleEffect, SIGNAL( clicked() ), this, SLOT( HandleEffect() ) );
+    connect( mpEffects, SIGNAL( itemClicked( QListWidgetItem* ) ), this, SLOT( HandleEffectClicked( QListWidgetItem* ) ) );
 
     QGridLayout* pGridLayout = new QGridLayout( this );
     pGridLayout->addWidget( mpSerialPorts, 0, 0 );
     pGridLayout->addWidget( mpOpenButton,  1, 0 );
     pGridLayout->addWidget( mpCloseButton, 2, 0 );
     pGridLayout->addWidget( mpLabel,       3, 0 );
-    pGridLayout->addWidget( mpFft,         0, 1, 4, 6 );
     pGridLayout->addWidget( mpMessages,    4, 0 );
-    pGridLayout->addWidget( mpBuckets,     4, 1, 1, 6 );
-    pGridLayout->addWidget( mpLo[0],       5, 1 );
-    pGridLayout->addWidget( mpHi[0],       6, 1 );
-    pGridLayout->addWidget( mpLo[1],       5, 2 );
-    pGridLayout->addWidget( mpHi[1],       6, 2 );
-    pGridLayout->addWidget( mpLo[2],       5, 3 );
-    pGridLayout->addWidget( mpHi[2],       6, 3 );
-    pGridLayout->addWidget( mpLo[3],       5, 4 );
-    pGridLayout->addWidget( mpHi[3],       6, 4 );
-    pGridLayout->addWidget( mpLo[4],       5, 5 );
-    pGridLayout->addWidget( mpHi[4],       6, 5 );
-    pGridLayout->addWidget( mpLo[5],       5, 6 );
-    pGridLayout->addWidget( mpHi[5],       6, 6 );
-    pGridLayout->addWidget( mpThreshold,   5, 0 );
-    pGridLayout->addWidget( mpAveraging,   6, 0 );
-    pGridLayout->addWidget( mpEffects,     7, 0 );
-    pGridLayout->addWidget( mpToggleEffect, 7, 1 );
-    pGridLayout->addWidget( mpLights,      8, 0, 1, 7 );
+    pGridLayout->addWidget( mpFft,         0, 1, 5, 6 );
+    pGridLayout->addWidget( mpSimulateBucketsCheck, 5, 0 );
+    pGridLayout->addWidget( mpBucketSliders[0],     5, 1 );
+    pGridLayout->addWidget( mpBucketSliders[1],     5, 2 );
+    pGridLayout->addWidget( mpBucketSliders[2],     5, 3 );
+    pGridLayout->addWidget( mpBucketSliders[3],     5, 4 );
+    pGridLayout->addWidget( mpBucketSliders[4],     5, 5 );
+    pGridLayout->addWidget( mpBucketSliders[5],     5, 6 );
+    pGridLayout->addWidget( mpEffects,     6, 0 );
+    pGridLayout->addWidget( mpBuckets,     6, 1, 1, 6 );
+    pGridLayout->addWidget( mpLo[0],       7, 1 );
+    pGridLayout->addWidget( mpHi[0],       8, 1 );
+    pGridLayout->addWidget( mpLo[1],       7, 2 );
+    pGridLayout->addWidget( mpHi[1],       8, 2 );
+    pGridLayout->addWidget( mpLo[2],       7, 3 );
+    pGridLayout->addWidget( mpHi[2],       8, 3 );
+    pGridLayout->addWidget( mpLo[3],       7, 4 );
+    pGridLayout->addWidget( mpHi[3],       8, 4 );
+    pGridLayout->addWidget( mpLo[4],       7, 5 );
+    pGridLayout->addWidget( mpHi[4],       8, 5 );
+    pGridLayout->addWidget( mpLo[5],       7, 6 );
+    pGridLayout->addWidget( mpHi[5],       8, 6 );
+    pGridLayout->addWidget( mpThreshold,   7, 0 );
+    pGridLayout->addWidget( mpAveraging,   8, 0 );
+    pGridLayout->addWidget( mpLights,      9, 0, 1, 7 );
 
     mpSerial = NULL;
 
@@ -169,6 +185,8 @@ cLP2::cLP2( QWidget* pParent )
     connect( mpOpenButton, SIGNAL( clicked() ), this, SLOT( Open() ) );
     connect( mpCloseButton, SIGNAL( clicked() ), this, SLOT( Close() ) );
     connect( this, SIGNAL( NewMessage( QByteArray ) ), this, SLOT( HandleNewMessage( QByteArray ) ) );
+
+    QThread::currentThread()->setPriority( QThread::HighPriority );
 }
 
 cLP2::~cLP2()
@@ -267,10 +285,13 @@ void cLP2::HandleNewMessage( QByteArray message )
     }
 
     mpFft->UpdateData( vFreqs, vFreqAverages );
-    mpBuckets->UpdateData( vBuckets, vBucketAverages );
-
     PatternUpdateFreq( newFreqs );
-    PatternUpdateBuckets( newBuckets, newBucketAverages );
+
+    if( !mpSimulateBucketsCheck->isChecked() )
+    {
+        mpBuckets->UpdateData( vBuckets, vBucketAverages );
+        PatternUpdateBuckets( newBuckets, newBucketAverages );
+    }
 
     mCountMessages++;
     if( mCountMessages >= 10 )
@@ -283,10 +304,33 @@ void cLP2::HandleNewMessage( QByteArray message )
     }
 }
 
+void cLP2::HandleBucketSliders( void )
+{
+    if( mpSimulateBucketsCheck->isChecked() )
+    {
+        quint16 newBuckets[GLOBAL_NUM_BUCKETS];
+        quint16 newBucketAverages[GLOBAL_NUM_BUCKETS];
+
+        QVector<quint32> vBuckets;
+        QVector<quint32> vBucketAverages;
+        for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+        {
+            newBuckets[i] = (quint16)mpBucketSliders[i]->value();
+            newBucketAverages[i] = 64;
+            vBuckets.append( mpBucketSliders[i]->value() );
+            vBucketAverages.append( 64 );
+        }
+
+        mpBuckets->UpdateData( vBuckets, vBucketAverages );
+        PatternUpdateBuckets( newBuckets, newBucketAverages );
+    }
+}
+
 void cLP2::HandleTimeout( void )
 {
     PatternProcess();
-    quint8* newData = PatternData();
+    quint8 newData[GLOBAL_NUM_CHANNELS];
+    PatternData( newData );
     QVector<quint8> vData;
     for( qint32 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
     {
@@ -320,34 +364,44 @@ void cLP2::UpdateAveraging( double averaging )
     AudioUpdateAveraging( (float)averaging );
 }
 
-void cLP2::HandleEffect( void )
+void cLP2::HandleEffectClicked( QListWidgetItem* pItem )
 {
-    eEffect effect = (eEffect)mpEffects->itemData( mpEffects->currentIndex() ).toInt();
-    char command = 0;
-    switch( effect )
+    eEffect effect = (eEffect)pItem->data( Qt::UserRole ).toUInt();
+    char message[8] = {0};
+    message[0] = 0x01;
+    message[1] = (quint8)effect;
+    if( pItem->isSelected() )
     {
-    case Effect_MANUAL:     command = '1';  break;
-    case Effect_CYCLE:      command = '2';  break;
-    case Effect_BREATH:     command = '3';  break;
-    case Effect_FREQ:       command = '4';  break;
-    case Effect_BUCKETS:    command = '5';  break;
-    case Effect_BASS_PULSE: command = '6';  break;
-    default:                                break;
-    }
-
-    const char commandString[1] = { command };
-    if( PatternGetEffect( effect ) )
-    {
-        PatternSetEffect( effect, false );
+        message[2] = 0x01;
+        PatternSetEffect( effect, true );
     }
     else
     {
-        PatternSetEffect( effect, true );
+        message[2] = 0x00;
+        PatternSetEffect( effect, false );
     }
+
     if( mpSerial )
     {
-        mpSerial->write( commandString, 1 );
+        mpSerial->write( message, 8 );
     }
+}
+
+QString cLP2::GetEffectName( eEffect effect )
+{
+    QString name;
+    switch( effect )
+    {
+    case Effect_NULL:       name = "NULL";          break;
+    case Effect_MANUAL:     name = "MANUAL";        break;
+    case Effect_CYCLE:      name = "CYCLE";         break;
+    case Effect_BREATH:     name = "BREATH";        break;
+    case Effect_FREQ:       name = "FREQ";          break;
+    case Effect_BUCKETS:    name = "BUCKETS";       break;
+    case Effect_BASS_PULSE: name = "BASS_PULSE";    break;
+    default:                                        break;
+    }
+    return name;
 }
 
 void cLP2::AddMessage( QString message )

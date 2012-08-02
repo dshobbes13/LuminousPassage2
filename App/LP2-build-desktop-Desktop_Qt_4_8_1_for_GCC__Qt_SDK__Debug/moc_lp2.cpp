@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'LP2.h'
 **
-** Created: Sun Jul 29 11:19:45 2012
+** Created: Wed Aug 1 21:27:31 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_cLP2[] = {
        6,       // revision
        0,       // classname
        0,    0, // classinfo
-      10,   14, // methods
+      11,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -41,8 +41,9 @@ static const uint qt_meta_data_cLP2[] = {
       88,    5,    5,    5, 0x08,
      104,    5,    5,    5, 0x08,
      122,    5,    5,    5, 0x08,
-     148,  138,    5,    5, 0x08,
-     172,    5,    5,    5, 0x08,
+     138,    5,    5,    5, 0x08,
+     170,  160,    5,    5, 0x08,
+     200,  194,    5,    5, 0x08,
 
        0        // eod
 };
@@ -52,8 +53,9 @@ static const char qt_meta_stringdata_cLP2[] = {
     "Open()\0Close()\0Read()\0"
     "HandleNewMessage(QByteArray)\0"
     "HandleTimeout()\0UpdateThreshold()\0"
-    "UpdateBuckets()\0averaging\0"
-    "UpdateAveraging(double)\0HandleEffect()\0"
+    "UpdateBuckets()\0HandleBucketSliders()\0"
+    "averaging\0UpdateAveraging(double)\0"
+    "pItem\0HandleEffectClicked(QListWidgetItem*)\0"
 };
 
 void cLP2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
@@ -70,8 +72,9 @@ void cLP2::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void *
         case 5: _t->HandleTimeout(); break;
         case 6: _t->UpdateThreshold(); break;
         case 7: _t->UpdateBuckets(); break;
-        case 8: _t->UpdateAveraging((*reinterpret_cast< double(*)>(_a[1]))); break;
-        case 9: _t->HandleEffect(); break;
+        case 8: _t->HandleBucketSliders(); break;
+        case 9: _t->UpdateAveraging((*reinterpret_cast< double(*)>(_a[1]))); break;
+        case 10: _t->HandleEffectClicked((*reinterpret_cast< QListWidgetItem*(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -109,9 +112,9 @@ int cLP2::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 10)
+        if (_id < 11)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 10;
+        _id -= 11;
     }
     return _id;
 }

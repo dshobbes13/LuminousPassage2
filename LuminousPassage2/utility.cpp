@@ -82,46 +82,6 @@ unsigned char Cos( unsigned char index )
     return pgm_read_byte_near( SINEWAVE + index + 64 );
 }
 
-void PrintDataCharRaw( unsigned char* data, unsigned char n )
-{
-    for( unsigned char i=0; i<n; i++ )
-    {
-        Serial.write( data[i] );
-    }
-}
-
-void PrintDataChar( const char* label, char* data, unsigned char n )
-{
-    Serial.print( label );
-    for( unsigned int i=0; i<n; i++ )
-    {
-        Serial.print( HexString( data[i] ) );
-        Serial.print( "::" );
-    }
-}
-
-void PrintDataUchar( const char* label, unsigned char* data, unsigned char n )
-{
-    Serial.print( label );
-    for( unsigned int i=0; i<n; i++ )
-    {
-        Serial.print( HexString( data[i] ) );
-        Serial.print( "::" );
-    }
-}
-
-void PrintDataUint( const char* label, unsigned int* data, unsigned char n )
-{
-    Serial.print( label );
-    for( unsigned int i=0; i<n; i++ )
-    {
-        unsigned char hi = (unsigned char)( data[i] >> 8 );
-        unsigned char lo = (unsigned char)data[i];
-        Serial.print( HexString( hi ) );
-        Serial.print( HexString( lo ) );
-        Serial.print( "::" );
-    }
-}
 
 char* HexString( unsigned char hex )
 {

@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 
+#include "com.h"
 #include "fft.h"
 #include "utility.h"
 
@@ -123,5 +124,5 @@ void test( const char* label, char* data )
     }
     fix_fft( data, mImagData, 6, 0 );
     Magnitude( mMagnitude, data, mImagData, NUM_SAMPLES/2 );
-    PrintDataUchar( label, mMagnitude, NUM_SAMPLES/2 );
+    ComPrintDataUchar( label, mMagnitude, NUM_SAMPLES/2 );
 }

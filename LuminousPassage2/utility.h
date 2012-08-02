@@ -1,5 +1,16 @@
+// File: utility.h
+
 #ifndef UTILITY_H
 #define UTILITY_H
+
+//*****************
+// INCLUDES
+//*****************
+
+
+//*****************
+// DEFINITIONS
+//*****************
 
 // Clear bit macro for SFRs
 #ifndef cbi
@@ -10,6 +21,11 @@
 #ifndef sbi
 #define sbi( sfr, bit ) ( _SFR_BYTE( sfr ) |= _BV( bit ) )
 #endif
+
+
+//*****************
+// PUBLIC FUNCTIONS
+//*****************
 
 void DebugInit( void );
 
@@ -22,14 +38,6 @@ void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n );
 unsigned char Sin( unsigned char index );
 
 unsigned char Cos( unsigned char index );
-
-void PrintDataCharRaw( unsigned char* data, unsigned char n );
-
-void PrintDataChar( const char* label, char* data, unsigned char n );
-
-void PrintDataUchar( const char* label, unsigned char* data, unsigned char n );
-
-void PrintDataUint( const char* label, unsigned int* data, unsigned char n );
 
 char* HexString( unsigned char hex );
 

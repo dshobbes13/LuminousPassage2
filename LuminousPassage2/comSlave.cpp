@@ -35,9 +35,11 @@
 // VARIABLES
 //*****************
 
+#if !defined( MASTER ) && !defined( MASTER_SINGLE )
 volatile static unsigned char mReadReady = 0;
 volatile static unsigned char mCurrentByte = 0;
-volatile static unsigned char mBytes[GLOBAL_NUM_SINGLE_CH] = {0};
+volatile static unsigned char mBytes[GLOBAL_NUM_CHANNELS] = {0};
+#endif
 
 //*****************
 // PRIVATE PROTOTYPES
@@ -66,6 +68,9 @@ void ComSlaveInit( void )
     twi_setAddress( 0x00 );
     twi_attachSlaveRxEvent( TwiRead );
     sbi( TWAR, TWGCE );
+#endif
+
+#ifdef COM_SLAVE_BLOCKING_VERSION
 #endif
 
     // Set I2C to 400kHz
@@ -98,16 +103,19 @@ void ComSlaveProcess( void )
 {
 }
 
-unsigned char ComSlaveReadReady( void )
+unsigned char ComSlaveReady( void )
 {
     return mReadReady;
 }
 
-void ComSlaveRead( unsigned char* bytes )
+void ComSlaveData( unsigned char* data )
 {
-    memcpy( bytes, (void*)mBytes, GLOBAL_NUM_SINGLE_CH );
+    cli();
+
+    memcpy( data, (void*)mBytes, GLOBAL_NUM_CHANNELS );
     mReadReady = 0;
-    mCurrentByte = 0;
+
+    sei();
 }
 
 //*****************
@@ -117,12 +125,12 @@ void ComSlaveRead( unsigned char* bytes )
 #ifdef COM_SLAVE_TWI_VERSION
 void TwiRead( unsigned char* data, int length )
 {
-    if( ( GLOBAL_NUM_SINGLE_CH - mCurrentByte ) > length )
+    if( ( GLOBAL_NUM_CHANNEL - mCurrentByte ) > length )
     {
         memcpy( &mBytes[mCurrentByte], data, length );
     }
     mCurrentByte += length;
-    if( mCurrentByte >= GLOBAL_NUM_SINGLE_CH )
+    if( mCurrentByte >= GLOBAL_NUM_CHANNELS )
     {
         mReadReady = 1;
     }
@@ -138,11 +146,32 @@ ISR( TWI_vect )
 
     switch( TWSR_STATUS )
     {
-    case TWSR_STATUS_SL_ADDR         0x60
-    case TWSR_STATUS_SL_GCALL        0x70
-    case TWSR_STATUS_SL_ADDR_DATA    0x80
-    case TWSR_STATUS_SL_GCALL_DATA   0X90
-    case TWSR_STATUS_SL_STOP         0xA0
+
+    case TWSR_STATUS_SL_ADDR:
+    case TWSR_STATUS_SL_GCALL:
+        // Being address, get ready to read bytes
+        mCurrentByte = 0;
+        mReadReady = 0;
+        break;
+
+    case TWSR_STATUS_SL_ADDR_DATA:
+    case TWSR_STATUS_SL_GCALL_DATA:
+        mBytes[mCurrentByte++] = TWDR;
+        break;
+
+    case TWSR_STATUS_SL_STOP:
+        if( mCurrentByte >= GLOBAL_NUM_CHANNELS )
+        {
+            mReadReady = 1;
+        }
+        mCurrentByte = 0;
+        break;
+
+    default:
+        // All other cases, error
+        mCurrentByte = 0;
+        mReadReady = 0;
+        break;
     }
 
 #ifdef DEBUG

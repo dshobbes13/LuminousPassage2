@@ -20,8 +20,8 @@ void ComSlaveInit( void );
 
 void ComSlaveProcess( void );
 
-unsigned char ComSlaveReadReady( void );
+unsigned char ComSlaveReady( void );
 
-void ComSlaveRead( unsigned char* bytes );
+void ComSlaveData( unsigned char* data );
 
 #endif
