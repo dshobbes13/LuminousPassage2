@@ -9,7 +9,9 @@
 #ifndef SOFTWARE
 
 #include <Arduino.h>
+#include <EEPROM.h>
 
+#include "config.h"
 #include "typedefs.h"
 
 #else
@@ -66,6 +68,50 @@ void AudioInit( void )
     mHi[4] = 32;
     mLo[5] = 33;
     mHi[5] = 63;
+}
+
+void AudioSave( void )
+{
+#ifdef FIRMWARE
+    cli();
+    EEPROM.write( EEPROM_AUDIO_THRESHOLD, mThreshold );
+    EEPROM.write( EEPROM_AUDIO_AVERAGING, mAveraging );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_0, mLo[0] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_0, mHi[0] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_1, mLo[1] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_1, mHi[1] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_2, mLo[2] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_2, mHi[2] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_3, mLo[3] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_3, mHi[3] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_4, mLo[4] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_4, mHi[4] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_5, mLo[5] );
+    EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_5, mHi[5] );
+    sei();
+#endif
+}
+
+void AudioLoad( void )
+{
+#ifdef FIRMWARE
+    cli();
+    mThreshold = EEPROM.read( EEPROM_AUDIO_THRESHOLD );
+    mAveraging = EEPROM.read( EEPROM_AUDIO_AVERAGING );
+    mLo[0] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_0 );
+    mHi[0] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_0 );
+    mLo[1] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_1 );
+    mHi[1] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_1 );
+    mLo[2] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_2 );
+    mHi[2] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_2 );
+    mLo[3] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_3 );
+    mHi[3] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_3 );
+    mLo[4] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_4 );
+    mHi[4] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_4 );
+    mLo[5] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_5 );
+    mHi[5] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_5 );
+    sei();
+#endif
 }
 
 void AudioUpdateThreshold( quint8 threshold )

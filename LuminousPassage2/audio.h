@@ -25,6 +25,10 @@
 
 void AudioInit( void );
 
+void AudioSave( void );
+
+void AudioLoad( void );
+
 void AudioUpdateThreshold( quint8 threshold );
 
 void AudioUpdateAveraging( float averaging );

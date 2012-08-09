@@ -4,6 +4,8 @@
 // INCLUDES
 //*****************
 
+#include <EEPROM.h>
+
 #include "ad.h"
 #include "audio.h"
 #include "com.h"
@@ -53,19 +55,23 @@ static unsigned char mUpdatePwm = 0;
 
 void setup( void )
 {
+
     // Init modules
     ComInit();
 
 #if defined( MASTER_SINGLE ) || defined( MASTER )
     AdInit();
     PatternInit();
-    ComMasterInit();
     AudioInit();
 #endif
 
-#if !defined( MASTER )
-    PwmInit();
+#if defined( MASTER )
+    ComMasterInit();
 #endif
+
+//#if !defined( MASTER )
+    PwmInit();
+//#endif
 
 #if !defined( MASTER_SINGLE ) && !defined( MASTER )
     ComSlaveInit();
@@ -77,6 +83,7 @@ void setup( void )
 #ifdef DEBUG
     DebugInit();
 #endif
+
 }
 
 //*****************
@@ -130,6 +137,14 @@ void loop( void )
         eCommand command = ComGetCommand();
         switch( command )
         {
+        case Command_SAVE:
+            PatternSave();
+            AudioSave();
+            break;
+        case Command_LOAD:
+            PatternLoad();
+            AudioLoad();
+            break;
         case Command_EFFECT:
             {
                 quint8 effect = ComGetByte( 0 );
@@ -137,10 +152,44 @@ void loop( void )
                 PatternSetEffect( (eEffect)effect, flag );
             }
             break;
+        case Command_BUCKETS:
+            {
+                quint8 bucketHysteresisFixed = ComGetByte( 0 );
+                float bucketHysteresis = ( (float)bucketHysteresisFixed ) / 255;
+                quint8 bucketTimeDebounceFlags = ComGetByte( 1 );
+                quint8 bucketTimeDebounceSeconds = ComGetByte( 2 );
+                PatternSetBucketParameters( bucketHysteresis, bucketTimeDebounceFlags, bucketTimeDebounceSeconds );
+            }
+            break;
         case Command_MANUAL:
             {
                 quint8 value = ComGetByte( 0 );
                 PatternSetManual( value );
+            }
+            break;
+        case Command_PULSE_SQUARE:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 length = ComGetByte( 1 );
+                quint8 width = ComGetByte( 2 );
+                PatternSetPulseSquare( source, length, width );
+            }
+            break;
+        case Command_PULSE_SINE:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 length = ComGetByte( 1 );
+                quint8 width = ComGetByte( 2 );
+                PatternSetPulseSine( source, length, width );
+            }
+            break;
+        case Command_DISTANCE_SQUARE:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 start = ComGetByte( 1 );
+                quint8 stop = ComGetByte( 2 );
+                quint8 amp = ComGetByte( 3 );
+                PatternSetDistanceSquare( source, start, stop, amp );
             }
             break;
         default:
@@ -211,6 +260,7 @@ void loop( void )
     if( mUpdatePwm )
     {
         mUpdatePwm = 0;
+        PwmSetChannels( mPwmValues );
         ComMasterSendBytes( mPwmValues );
     }
 
@@ -221,6 +271,8 @@ void loop( void )
     if( ( millis() - mDebugPrintTime ) > 1000 )
     {
         mDebugPrintTime = millis();
+
+        //ComPrint( "HELLO WORLD\n\r" );
 
         /*
         // Analog audio

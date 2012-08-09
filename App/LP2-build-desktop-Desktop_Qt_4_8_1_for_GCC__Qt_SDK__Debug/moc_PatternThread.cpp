@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'PatternThread.h'
 **
-** Created: Thu Aug 2 07:38:27 2012
+** Created: Wed Aug 8 09:08:12 2012
 **      by: The Qt Meta Object Compiler version 63 (Qt 4.8.1)
 **
 ** WARNING! All changes made in this file will be lost!

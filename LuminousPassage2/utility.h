@@ -35,10 +35,6 @@ void DebugDown( void );
 
 void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n );
 
-unsigned char Sin( unsigned char index );
-
-unsigned char Cos( unsigned char index );
-
 char* HexString( unsigned char hex );
 
 char HexChar( unsigned char hex );

@@ -20,7 +20,6 @@
 //#define DEBUG
 
 #define BUFFER_LENGTH   32
-#define MESSAGE_LENGTH  8
 
 #define TIMEOUT         10
 

@@ -26,7 +26,7 @@
 namespace
 {
     const qint32 WIDTH = 20;
-    const qint32 HEIGHT = 256;
+    const qint32 HEIGHT = 128;
 
     const qreal BAR_PERCENT_W = 0.8;
     const qreal BAR_PERCENT_H = 0.9;
@@ -40,6 +40,7 @@ cFft::cFft( qint32 number, qint32 scale, QStringList labels, QWidget* pParent )
     : QWidget( pParent )
     , mNumber( number )
     , mScale( scale )
+    , mHysteresis( 0.1 )
 {
     for( qint32 i=0; i<mNumber; i++ )
     {
@@ -64,6 +65,11 @@ cFft::cFft( qint32 number, qint32 scale, QStringList labels, QWidget* pParent )
 
 cFft::~cFft()
 {
+}
+
+void cFft::SetHysteresis( qreal hysteresis )
+{
+    mHysteresis = hysteresis;
 }
 
 QSize cFft::sizeHint( void ) const
@@ -114,7 +120,6 @@ void cFft::resizeEvent( QResizeEvent* pEvent )
     qreal h = size.height();
 
     qreal step = ( w / mNumber );
-    qreal offset = step / 2;
 
     qreal textHeight = h * ( 1 - BAR_PERCENT_H ) / 2;
     qreal textRow1 = h * BAR_PERCENT_H;
@@ -187,9 +192,15 @@ void cFft::paintEvent( QPaintEvent* pEvent )
         painter.setPen( QPen( QBrush( Qt::black ), 5 ) );
         painter.drawLine( x + barOffset, avgY, x + barOffset + barWidth, avgY );
 
+        // Draw hysteresis lines
+        qreal hiY = barHeight * ( 1 - ( avgPercent * ( 1 + mHysteresis ) ) );
+        qreal loY = barHeight * ( 1 - ( avgPercent * ( 1 - mHysteresis ) ) );
+        painter.setPen( QPen( QBrush( Qt::black ), 3 ) );
+        painter.drawLine( x + barOffset, hiY, x + barOffset + barWidth, hiY );
+        painter.drawLine( x + barOffset, loY, x + barOffset + barWidth, loY );
+
         QRect textRect1( x + barOffset,  0, barWidth, 15 );
         QRect textRect2( x + barOffset, 15, barWidth, 15 );
-        painter.setPen( QPen( QBrush( Qt::black ), 3 ) );
         painter.drawText( textRect1, Qt::AlignHCenter | Qt::AlignVCenter, QString::number( mPeak.at(i) ) );
         painter.drawText( textRect2, Qt::AlignHCenter | Qt::AlignVCenter, QString::number( avgValue ) );
     }

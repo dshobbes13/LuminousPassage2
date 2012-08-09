@@ -37,6 +37,8 @@ public:
     cFft( qint32 number, qint32 scale, QStringList labels, QWidget* pParent = 0 );
     ~cFft();
 
+    void SetHysteresis( qreal hysteresis );
+
     virtual QSize sizeHint( void ) const;
     virtual QSize minimumSizeHint( void ) const;
 
@@ -55,6 +57,7 @@ private:
     QVector<quint32> mData;
     QVector<quint32> mAverages;
     QVector<quint32> mPeak;
+    qreal mHysteresis;
 };
 
 #endif // FFT_H

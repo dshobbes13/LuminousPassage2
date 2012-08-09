@@ -34,6 +34,7 @@ class cSerialDevice;
 class cLights;
 class cPatternThread;
 
+#include "com.h"
 
 //******************
 // DEFINITIONS
@@ -60,42 +61,63 @@ private slots:
     void Close( void );
     void Read( void );
     void HandleNewMessage( QByteArray message );
-    void HandleTimeout( void );
     void HandleUpdatedPattern( quint8* newPattern );
     void UpdateThreshold( void );
+    void UpdateAveraging( double averaging );
+    void UpdateBucketParameters( void );
     void UpdateBuckets( void );
     void HandleBucketSliders( void );
-    void UpdateAveraging( double averaging );
     void HandleEffectClicked( QListWidgetItem* pItem );
+    void HandleManual( void );
+    void HandlePulseSquare( void );
+    void HandlePulseSine( void );
+    void HandleDistanceSquare( void );
+
+    void Save( void );
+    void Load( void );
 
 private:
+    void SendCommand( eCommand, QByteArray data );
     QString GetEffectName( eEffect effect );
     void AddMessage( QString message );
 
     QComboBox* mpSerialPorts;
     QPushButton* mpOpenButton;
     QPushButton* mpCloseButton;
+    QListWidget* mpMessages;
+    QLabel* mpLabel;
 
     QStringList mFftLabels;
     cFft* mpFft;
 
     QCheckBox* mpSimulateBucketsCheck;
-    QSlider* mpBucketSliders[GLOBAL_NUM_BUCKETS];
-    cFft* mpBuckets;
+    QSlider* mpBucketValSliders[GLOBAL_NUM_BUCKETS];
+    QSlider* mpBucketAvgSliders[GLOBAL_NUM_BUCKETS];
 
-    QListWidget* mpEffects;
-    cLights* mpLights;
-
-    cPatternThread* mpPatternThread;
-
-    QSpinBox* mpLo[GLOBAL_NUM_BUCKETS];
-    QSpinBox* mpHi[GLOBAL_NUM_BUCKETS];
     QSpinBox* mpThreshold;
     QDoubleSpinBox* mpAveraging;
+    QDoubleSpinBox* mpHysteresis;
+    QSpinBox* mpSeconds;
+    QCheckBox* mpTimeFlags[GLOBAL_NUM_BUCKETS];
+    cFft* mpBuckets;
+    QSpinBox* mpLo[GLOBAL_NUM_BUCKETS];
+    QSpinBox* mpHi[GLOBAL_NUM_BUCKETS];
 
-    QListWidget* mpMessages;
-    QLabel* mpLabel;
+    cLights* mpLights;
+    QListWidget* mpEffects;
+    QSlider* mpManualValueSlider;
+    QSpinBox* mpPulseSquareSourceSpin;
+    QSpinBox* mpPulseSquareLengthSpin;
+    QSpinBox* mpPulseSquareWidthSpin;
+    QSpinBox* mpPulseSineSourceSpin;
+    QSpinBox* mpPulseSineLengthSpin;
+    QSpinBox* mpPulseSineWidthSpin;
+    QSpinBox* mpDistanceSquareSourceSpin;
+    QSpinBox* mpDistanceSquareStartSpin;
+    QSpinBox* mpDistanceSquareStopSpin;
+    QSpinBox* mpDistanceSquareAmpSpin;
 
+    cPatternThread* mpPatternThread;
     cSerialDevice* mpSerial;
 
     QByteArray mDataRx;

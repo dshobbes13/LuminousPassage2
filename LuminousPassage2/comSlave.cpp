@@ -4,6 +4,9 @@
 // INCLUDES
 //*****************
 
+#include "config.h"
+#if !defined( MASTER )
+
 #include "comSlave.h"
 
 #include <Arduino.h>
@@ -35,11 +38,10 @@
 // VARIABLES
 //*****************
 
-#if !defined( MASTER ) && !defined( MASTER_SINGLE )
 volatile static unsigned char mReadReady = 0;
 volatile static unsigned char mCurrentByte = 0;
 volatile static unsigned char mBytes[GLOBAL_NUM_CHANNELS] = {0};
-#endif
+
 
 //*****************
 // PRIVATE PROTOTYPES
@@ -65,7 +67,7 @@ void ComSlaveInit( void )
 
 #ifdef COM_SLAVE_TWI_VERSION
     twi_init();
-    twi_setAddress( 0x00 );
+    twi_setAddress( 0x01 );
     twi_attachSlaveRxEvent( TwiRead );
     sbi( TWAR, TWGCE );
 #endif
@@ -86,15 +88,11 @@ void ComSlaveInit( void )
     TWAR = 0x00;
     sbi( TWAR, TWGCE );
 
-    // Enable sending acks
-    sbi( TWCR, TWEA );
-
-    // Enable TWI and setup for interrupts
-    sbi( TWCR, TWEN );
-    sbi( TWCR, TWIE );
+    // Setup TWI for slave receive
+    TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
 #endif
 
-#if defined( COM_SLAVE_ISR_VERSION ) && defined( DEBUG )
+#ifdef  DEBUG
     DebugInit();
 #endif
 }
@@ -125,19 +123,25 @@ void ComSlaveData( unsigned char* data )
 #ifdef COM_SLAVE_TWI_VERSION
 void TwiRead( unsigned char* data, int length )
 {
-    if( ( GLOBAL_NUM_CHANNEL - mCurrentByte ) > length )
+#ifdef DEBUG
+    DebugUp();
+#endif
+    if( ( GLOBAL_NUM_CHANNELS - mCurrentByte ) > length )
     {
-        memcpy( &mBytes[mCurrentByte], data, length );
+        memcpy( (void*)&mBytes[mCurrentByte], data, length );
     }
     mCurrentByte += length;
     if( mCurrentByte >= GLOBAL_NUM_CHANNELS )
     {
         mReadReady = 1;
     }
+#ifdef DEBUG
+    DebugDown();
+#endif
 }
 #endif
 
-#ifdef COM_SLAVE_TWI_VERSION
+#if defined( COM_SLAVE_ISR_VERSION )
 ISR( TWI_vect )
 {
 #ifdef DEBUG
@@ -152,11 +156,13 @@ ISR( TWI_vect )
         // Being address, get ready to read bytes
         mCurrentByte = 0;
         mReadReady = 0;
+        TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
         break;
 
     case TWSR_STATUS_SL_ADDR_DATA:
     case TWSR_STATUS_SL_GCALL_DATA:
         mBytes[mCurrentByte++] = TWDR;
+        TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
         break;
 
     case TWSR_STATUS_SL_STOP:
@@ -165,12 +171,14 @@ ISR( TWI_vect )
             mReadReady = 1;
         }
         mCurrentByte = 0;
+        TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
         break;
 
     default:
         // All other cases, error
         mCurrentByte = 0;
         mReadReady = 0;
+        TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
         break;
     }
 
@@ -180,3 +188,4 @@ ISR( TWI_vect )
 }
 #endif
 
+#endif // !MASTER && !MASTER_SINGLE

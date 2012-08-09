@@ -4,6 +4,9 @@
 // INCLUDES
 //*****************
 
+#include "config.h"
+#if defined( MASTER )
+
 #include "comMaster.h"
 
 #include <Arduino.h>
@@ -84,26 +87,9 @@ void ComMasterInit( void )
     digitalWrite( SDA, 1 );
     digitalWrite( SCL, 1 );
 
-#ifdef COM_MASTER_TWI_VERSION
-    twi_writeTo( 0x00, mBytes, COM_MASTER_NUM_BYTES, false, true );
-#endif
-
-#ifdef COM_MASTER_BLOCKING_VERSION
-    SendStart();
-    SendAddress( 0x00 );
-    for( unsigned char i=0; i<GLOBAL_NUM_CHANNELS; i++ )
-    {
-        SendData( mBytes[i] );
-    }
-    SendStop();
-#endif
-
 #ifdef COM_MASTER_ISR_VERSION
     // Enable TWI and setup for interrupts
     TWCR = _BV( TWEN ) | _BV( TWIE );
-
-    InitiateTransfer();
-    while( mBusy );
 #endif
 }
 
@@ -113,6 +99,14 @@ void ComMasterProcess( void )
 
 void ComMasterSendBytes( unsigned char* bytes )
 {
+
+#ifdef COM_MASTER_ISR_VERSION
+    if( mBusy )
+    {
+        return;
+    }
+#endif
+
     cli();
     memcpy( (void*)mBytes, bytes, GLOBAL_NUM_CHANNELS );
     sei();
@@ -168,7 +162,7 @@ void SendStop( void )
 }
 #endif
 
-#ifdef COM_MASTER_ISR_VERSION
+#if defined( COM_MASTER_ISR_VERSION )
 void InitiateTransfer( void )
 {
     mTwiStep = 0;
@@ -176,38 +170,79 @@ void InitiateTransfer( void )
     mBusy = 1;
     TWCR = _BV( TWINT ) | _BV( TWSTA ) | _BV( TWEN ) | _BV( TWIE );
 }
+#endif
 
+#if defined( COM_MASTER_ISR_VERSION )
 ISR( TWI_vect )
 {
 #ifdef DEBUG
     DebugUp();
 #endif
+
     switch( mTwiStep )
     {
     case 0:
-        // Send address
-        TWDR = (unsigned char)0x00;
-        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
-        mTwiStep++;
+        if( TWSR_STATUS == TWSR_STATUS_START )
+        {
+            // Send address
+            TWDR = (unsigned char)0x00;
+            TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+            mTwiStep++;
+        }
+        else
+        {
+            // Failed to start
+            TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
+            mTwiStep = 0;
+            mCurrentByte = 0;
+            mBusy = 0;
+        }
         break;
     case 1:
-        // Send data bytes
-        TWDR = (unsigned char)mBytes[mCurrentByte];
-        TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
-        if( ++mCurrentByte >= GLOBAL_NUM_CHANNELS )
+        if( ( TWSR_STATUS == TWSR_STATUS_SLAW_ACK ) || ( TWSR_STATUS == TWSR_STATUS_DATA_ACK ) )
         {
-            mTwiStep++;
+            // Send data bytes
+            TWDR = (unsigned char)mBytes[mCurrentByte];
+            TWCR = _BV( TWINT ) | _BV( TWEN ) | _BV( TWIE );
+            if( ++mCurrentByte >= GLOBAL_NUM_CHANNELS )
+            {
+                mTwiStep++;
+            }
+        }
+        else
+        {
+            // Failed to send address/data
+            TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
+            mTwiStep = 0;
+            mCurrentByte = 0;
+            mBusy = 0;
         }
         break;
     case 2:
-        // Send stop byte and wait
-        TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN ) | _BV( TWIE );
-        while( TWCR & _BV( TWSTO ) );
-        mBusy = 0;
+        if( TWSR_STATUS == TWSR_STATUS_DATA_ACK )
+        {
+            // Send stop byte and wait
+            TWCR = _BV( TWINT ) | _BV( TWSTO ) | _BV( TWEN ) | _BV( TWIE );
+            while( TWCR & _BV( TWSTO ) );
+            mTwiStep = 0;
+            mCurrentByte = 0;
+            mBusy = 0;
+        }
+        else
+        {
+            // Failed to send last data byte
+            TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
+            mTwiStep = 0;
+            mCurrentByte = 0;
+            mBusy = 0;
+        }
         break;
     default:
         // Bad, reset to start
         TWCR = ~_BV( TWEN ) & ~_BV( TWIE );
+        mTwiStep = 0;
+        mCurrentByte = 0;
+        mBusy = 0;
         break;
     }
 #ifdef DEBUG
@@ -216,3 +251,4 @@ ISR( TWI_vect )
 }
 #endif
 
+#endif // MASTER
