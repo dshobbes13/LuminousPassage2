@@ -29,11 +29,7 @@ void AudioSave( void );
 
 void AudioLoad( void );
 
-void AudioUpdateThreshold( quint8 threshold );
-
-void AudioUpdateAveraging( float averaging );
-
-void AudioUpdateBuckets( quint8* lo, quint8* hi );
+void AudioSetParameters( quint8 threshold, float averaging, quint8* lo, quint8* hi );
 
 void AudioUpdateFreq( quint8* newFrequencies );
 

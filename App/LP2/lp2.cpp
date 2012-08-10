@@ -17,6 +17,7 @@
 #include <QListWidget>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QSettings>
 #include <QSpacerItem>
 #include <QSpinBox>
 #include <QTimer>
@@ -41,6 +42,30 @@
 
 #define MAX_MESSAGE_COUNT   50
 
+#define SETTINGS_FILE   "Settings"
+
+#define SETTINGS_HYSTERESIS     "Hysteresis"
+#define SETTINGS_THRESHOLD      "Threshold"
+#define SETTINGS_AVERAGING      "Averaging"
+#define SETTINGS_LO             "Lo"
+#define SETTINGS_HI             "Hi"
+#define SETTINGS_SECONDS        "Seconds"
+#define SETTINGS_TIME_FLAG      "TimeFlag"
+
+#define SETTINGS_EFFECT         "Effect"
+
+#define SETTINGS_PULSE_SQUARE_SOURCE    "PulseSquareSource"
+#define SETTINGS_PULSE_SQUARE_LENGTH    "PulseSquareLength"
+#define SETTINGS_PULSE_SQUARE_WIDTH     "PulseSquareWidth"
+
+#define SETTINGS_PULSE_SINE_SOURCE    "PulseSineSource"
+#define SETTINGS_PULSE_SINE_LENGTH    "PulseSineLength"
+#define SETTINGS_PULSE_SINE_WIDTH     "PulseSineWidth"
+
+#define SETTINGS_DISTANCE_SQUARE_SOURCE     "DistanceSquareSource"
+#define SETTINGS_DISTANCE_SQUARE_START      "DistanceSquareStart"
+#define SETTINGS_DISTANCE_SQUARE_STOP       "DistanceSquareStop"
+#define SETTINGS_DISTANCE_SQUARE_AMP        "DistanceSquareAmp"
 
 //******************
 // CLASS
@@ -51,6 +76,9 @@ cLP2::cLP2( QWidget* pParent )
     , mpSerial( NULL )
 {
 
+    QSettings settings( SETTINGS_FILE, QSettings::NativeFormat );
+
+    // Serial port, open/close
     mpSerialPorts = new QComboBox( this );
     QDir dir( "/dev" );
     QStringList modems = dir.entryList( QStringList() << "tty.usbmodem*", QDir::System );
@@ -61,13 +89,13 @@ cLP2::cLP2( QWidget* pParent )
     mpCloseButton = new QPushButton( "Close", this );
     connect( mpCloseButton, SIGNAL( clicked() ), this, SLOT( Close() ) );
 
-
     mpMessages = new QListWidget( this );
     mpMessages->setMinimumWidth( 250 );
     mpMessages->setMaximumHeight( 200 );
 
     mpLabel = new QLabel( "Avg Message Rate - " );
 
+    // FFT display
     qint32 maxFreq = 5120 / 2;
     qint32 freqWidth = maxFreq / GLOBAL_NUM_FREQ;
     qint32 freqStart = freqWidth / 2;
@@ -94,6 +122,12 @@ cLP2::cLP2( QWidget* pParent )
     mpFft = new cFft( GLOBAL_NUM_FREQ, 256, mFftLabels, this );
     mpFft->SetHysteresis( 0.1 );
 
+    // Bucket display
+    QStringList bucketLabels;
+    bucketLabels << "1" << "2" << "3" << "4" << "5" << "6";
+    mpBuckets = new cFft( GLOBAL_NUM_BUCKETS, 512, bucketLabels, this );
+    mpBuckets->SetHysteresis( settings.value( SETTINGS_HYSTERESIS, 0.25 ).toDouble() );
+
     mpSimulateBucketsCheck = new QCheckBox( "Simulate Buckets", this );
     for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
     {
@@ -108,8 +142,8 @@ cLP2::cLP2( QWidget* pParent )
     mpThreshold = new QSpinBox( this );
     mpThreshold->setRange( 0, 10 );
     mpThreshold->setSuffix( " thresh" );
-    connect( mpThreshold, SIGNAL( valueChanged( int ) ), this, SLOT( UpdateThreshold() ) );
-    mpThreshold->setValue( 8 );
+    mpThreshold->setValue( settings.value( SETTINGS_THRESHOLD, 8 ).toUInt() );
+    connect( mpThreshold, SIGNAL( valueChanged( int ) ), this, SLOT( UpdateAudioParameters() ) );
 
     mpAveraging = new QDoubleSpinBox( this );
     mpAveraging->setMinimum( 0.0 );
@@ -117,40 +151,8 @@ cLP2::cLP2( QWidget* pParent )
     mpAveraging->setDecimals( 2 );
     mpAveraging->setSingleStep( 0.05 );
     mpAveraging->setSuffix( " avg" );
-    connect( mpAveraging, SIGNAL( valueChanged( double ) ), this, SLOT( UpdateAveraging( double ) ) );
-    mpAveraging->setValue( 0.9 );
-
-    mpHysteresis = new QDoubleSpinBox( this );
-    mpHysteresis->setMinimum( 0.0 );
-    mpHysteresis->setMaximum( 1.0 );
-    mpHysteresis->setDecimals( 2 );
-    mpHysteresis->setSingleStep( 0.01 );
-    mpHysteresis->setValue( 0.25 );
-    mpHysteresis->setSuffix( " hyst" );
-
-    mpSeconds = new QSpinBox( this );
-    mpSeconds->setRange( 0, 10 );
-    mpSeconds->setValue( 0 );
-    mpSeconds->setSuffix( " sec" );
-
-    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
-    {
-        mpTimeFlags[i] = new QCheckBox( this );
-    }
-
-    QStringList bucketLabels;
-    bucketLabels << "1" << "2" << "3" << "4" << "5" << "6";
-    mpBuckets = new cFft( GLOBAL_NUM_BUCKETS, 512, bucketLabels, this );
-    mpBuckets->SetHysteresis( 0.25 );
-
-    connect( mpHysteresis, SIGNAL( valueChanged( double ) ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpSeconds, SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[0], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[1], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[2], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[3], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[4], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
-    connect( mpTimeFlags[5], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
+    mpAveraging->setValue( settings.value( SETTINGS_AVERAGING, 0.9 ).toDouble() );
+    connect( mpAveraging, SIGNAL( valueChanged( double ) ), this, SLOT( UpdateAudioParameters() ) );
 
     for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
     {
@@ -158,22 +160,35 @@ cLP2::cLP2( QWidget* pParent )
         mpHi[i] = new QSpinBox( this );
         mpLo[i]->setRange( 0, GLOBAL_NUM_FREQ-1 );
         mpHi[i]->setRange( 0, GLOBAL_NUM_FREQ-1 );
-        connect( mpLo[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBuckets() ) );
-        connect( mpHi[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBuckets() ) );
+        mpLo[i]->setValue( settings.value( SETTINGS_LO + QString::number(i), 0 ).toUInt() );
+        mpHi[i]->setValue( settings.value( SETTINGS_HI + QString::number(i), 0 ).toUInt() );
+        connect( mpLo[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
+        connect( mpHi[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
     }
-    mpLo[0]->setValue( 1 );
-    mpHi[0]->setValue( 2 );
-    mpLo[1]->setValue( 3 );
-    mpHi[1]->setValue( 4 );
-    mpLo[2]->setValue( 5 );
-    mpHi[2]->setValue( 8 );
-    mpLo[3]->setValue( 9 );
-    mpHi[3]->setValue( 16 );
-    mpLo[4]->setValue( 17 );
-    mpHi[4]->setValue( 32 );
-    mpLo[5]->setValue( 33 );
-    mpHi[5]->setValue( 63 );
 
+    mpHysteresis = new QDoubleSpinBox( this );
+    mpHysteresis->setMinimum( 0.0 );
+    mpHysteresis->setMaximum( 1.0 );
+    mpHysteresis->setDecimals( 2 );
+    mpHysteresis->setSingleStep( 0.01 );
+    mpHysteresis->setSuffix( " hyst" );
+    mpHysteresis->setValue( settings.value( SETTINGS_HYSTERESIS, 0.25 ).toDouble() );
+    connect( mpHysteresis, SIGNAL( valueChanged( double ) ), this, SLOT( UpdateBucketParameters() ) );
+
+    mpSeconds = new QSpinBox( this );
+    mpSeconds->setRange( 0, 10 );
+    mpSeconds->setSuffix( " sec" );
+    mpSeconds->setValue( settings.value( SETTINGS_SECONDS, 0 ).toUInt() );
+    connect( mpSeconds, SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
+
+    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        mpTimeFlags[i] = new QCheckBox( this );
+        mpTimeFlags[i]->setChecked( settings.value( SETTINGS_TIME_FLAG + QString::number(i), false ).toBool() );
+        connect( mpTimeFlags[i], SIGNAL( clicked() ), this, SLOT( UpdateBucketParameters() ) );
+    }
+
+    // Lights display
     mpLights = new cLights( GLOBAL_NUM_CHANNELS, this );
 
     mpEffects = new QListWidget( this );
@@ -183,13 +198,16 @@ cLP2::cLP2( QWidget* pParent )
         QListWidgetItem* pItem = new QListWidgetItem( GetEffectName( (eEffect)i ) );
         pItem->setData( Qt::UserRole, i );
         mpEffects->addItem( pItem );
+        pItem->setSelected( settings.value( SETTINGS_EFFECT + QString::number(i), false ).toBool() );
     }
     connect( mpEffects, SIGNAL( itemClicked( QListWidgetItem* ) ), this, SLOT( HandleEffectClicked( QListWidgetItem* ) ) );
 
+    // Effect MANUAL
     mpManualValueSlider = new QSlider( Qt::Horizontal, this );
     mpManualValueSlider->setRange( 0, 255 );
     connect( mpManualValueSlider, SIGNAL( valueChanged( int ) ), this, SLOT( HandleManual() ) );
 
+    // Effect PULSE SQUARE
     mpPulseSquareSourceSpin = new QSpinBox( this );
     mpPulseSquareSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
     mpPulseSquareSourceSpin->setSuffix( " source" );
@@ -199,13 +217,14 @@ cLP2::cLP2( QWidget* pParent )
     mpPulseSquareWidthSpin = new QSpinBox( this );
     mpPulseSquareWidthSpin->setRange( 0, 64 );
     mpPulseSquareWidthSpin->setSuffix( " width" );
+    mpPulseSquareSourceSpin->setValue( settings.value( SETTINGS_PULSE_SQUARE_SOURCE, 1 ).toUInt() );
+    mpPulseSquareLengthSpin->setValue( settings.value( SETTINGS_PULSE_SQUARE_LENGTH, 40 ).toUInt() );
+    mpPulseSquareWidthSpin->setValue( settings.value( SETTINGS_PULSE_SQUARE_WIDTH, 10 ).toUInt() );
     connect( mpPulseSquareSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSquare() ) );
     connect( mpPulseSquareLengthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSquare() ) );
     connect( mpPulseSquareWidthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSquare() ) );
-    mpPulseSquareSourceSpin->setValue( 1 );
-    mpPulseSquareLengthSpin->setValue( 40 );
-    mpPulseSquareWidthSpin->setValue( 10 );
 
+    // Effect PULSE SINE
     mpPulseSineSourceSpin = new QSpinBox( this );
     mpPulseSineSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
     mpPulseSineSourceSpin->setSuffix( " source" );
@@ -215,13 +234,14 @@ cLP2::cLP2( QWidget* pParent )
     mpPulseSineWidthSpin = new QSpinBox( this );
     mpPulseSineWidthSpin->setRange( 0, 64 );
     mpPulseSineWidthSpin->setSuffix( " width" );
+    mpPulseSquareSourceSpin->setValue( settings.value( SETTINGS_PULSE_SINE_SOURCE, 1 ).toUInt() );
+    mpPulseSquareLengthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_LENGTH, 40 ).toUInt() );
+    mpPulseSquareWidthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_WIDTH, 10 ).toUInt() );
     connect( mpPulseSineSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
     connect( mpPulseSineLengthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
     connect( mpPulseSineWidthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
-    mpPulseSineSourceSpin->setValue( 1 );
-    mpPulseSineLengthSpin->setValue( 40 );
-    mpPulseSineWidthSpin->setValue( 10 );
 
+    // Effect DISTANCE SQUARE
     mpDistanceSquareSourceSpin = new QSpinBox( this );
     mpDistanceSquareSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
     mpDistanceSquareSourceSpin->setSuffix( " source" );
@@ -234,15 +254,16 @@ cLP2::cLP2( QWidget* pParent )
     mpDistanceSquareAmpSpin = new QSpinBox( this );
     mpDistanceSquareAmpSpin->setRange( 0, 5 );
     mpDistanceSquareAmpSpin->setSuffix( " amp" );
+    mpDistanceSquareSourceSpin->setValue( settings.value( SETTINGS_DISTANCE_SQUARE_SOURCE, 2 ).toUInt() );
+    mpDistanceSquareStartSpin->setValue( settings.value( SETTINGS_DISTANCE_SQUARE_START, 50 ).toUInt() );
+    mpDistanceSquareStopSpin->setValue( settings.value( SETTINGS_DISTANCE_SQUARE_STOP, 59 ).toUInt() );
+    mpDistanceSquareAmpSpin->setValue( settings.value( SETTINGS_DISTANCE_SQUARE_AMP, 1 ).toUInt() );
     connect( mpDistanceSquareSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
     connect( mpDistanceSquareStartSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
     connect( mpDistanceSquareStopSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
     connect( mpDistanceSquareAmpSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
-    mpDistanceSquareSourceSpin->setValue( 2 );
-    mpDistanceSquareStartSpin->setValue( 50 );
-    mpDistanceSquareStopSpin->setValue( 59 );
-    mpDistanceSquareAmpSpin->setValue( 1 );
 
+    // Layout
     QVBoxLayout* pMainLayout = new QVBoxLayout( this );
     QGridLayout* pGridLayout;
     QHBoxLayout* pHBoxLayout;
@@ -327,6 +348,7 @@ cLP2::cLP2( QWidget* pParent )
     pGridLayout->setColumnStretch( 4, 1 );
     pMainLayout->addLayout( pGridLayout );
 
+    // Load/Save
     QPushButton* pSaveButton = new QPushButton( "Save", this );
     QPushButton* pLoadButton = new QPushButton( "Load", this );
     pMainLayout->addWidget( pSaveButton );
@@ -334,10 +356,12 @@ cLP2::cLP2( QWidget* pParent )
     connect( pSaveButton, SIGNAL( clicked() ), this, SLOT( Save() ) );
     connect( pLoadButton, SIGNAL( clicked() ), this, SLOT( Load() ) );
 
+    // Pattern updating
     mpPatternThread = new cPatternThread( this );
     connect( mpPatternThread, SIGNAL( UpdatedPattern( quint8* ) ), this, SLOT( HandleUpdatedPattern( quint8* ) ) );
     mpPatternThread->start();
 
+    // Message handling
     connect( this, SIGNAL( NewMessage( QByteArray ) ), this, SLOT( HandleNewMessage( QByteArray ) ) );
 
     QThread::currentThread()->setPriority( QThread::HighPriority );
@@ -493,15 +517,41 @@ void cLP2::HandleUpdatedPattern( quint8* newPattern )
     mpLights->UpdateData( vData );
 }
 
-void cLP2::UpdateThreshold( void )
+void cLP2::UpdateAudioParameters( void )
 {
-    quint8 threshold = (quint8)( mpThreshold->value() );
-    AudioUpdateThreshold( threshold );
-}
+    quint8 threshold = mpThreshold->value();
+    qreal averaging = mpAveraging->value();
+    quint8 mLo[GLOBAL_NUM_BUCKETS];
+    quint8 mHi[GLOBAL_NUM_BUCKETS];
+    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        mpLo[i]->setSuffix( QString( " - " + mFftLabels.at( mpLo[i]->value() ) ) );
+        mpHi[i]->setSuffix( QString( " - " + mFftLabels.at( mpHi[i]->value() ) ) );
+        mLo[i] = mpLo[i]->value();
+        mHi[i] = mpHi[i]->value();
+    }
 
-void cLP2::UpdateAveraging( double averaging )
-{
-    AudioUpdateAveraging( (float)averaging );
+    AudioSetParameters( threshold, (float)averaging, mLo, mHi );
+
+    quint8 averagingFixed = 255 * averaging;
+    QByteArray data( MESSAGE_LENGTH-1, 0 );
+
+    data.insert( 0, threshold );
+    data.insert( 1, averagingFixed );
+    data.insert( 2, mLo[0] );
+    data.insert( 3, mHi[0] );
+    data.insert( 4, mLo[1] );
+    data.insert( 5, mHi[1] );
+    data.insert( 6, mLo[2] );
+    data.insert( 7, mHi[2] );
+    data.insert( 8, mLo[3] );
+    data.insert( 9, mHi[3] );
+    data.insert( 10, mLo[4] );
+    data.insert( 11, mHi[4] );
+    data.insert( 12, mLo[5] );
+    data.insert( 13, mHi[5] );
+
+    SendCommand( Command_AUDIO, data );
 }
 
 void cLP2::UpdateBucketParameters( void )
@@ -527,20 +577,6 @@ void cLP2::UpdateBucketParameters( void )
     data.insert( 2, seconds );
 
     SendCommand( Command_BUCKETS, data );
-}
-
-void cLP2::UpdateBuckets( void )
-{
-    quint8 mLo[GLOBAL_NUM_BUCKETS];
-    quint8 mHi[GLOBAL_NUM_BUCKETS];
-    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
-    {
-        mpLo[i]->setSuffix( QString( " - " + mFftLabels.at( mpLo[i]->value() ) ) );
-        mpHi[i]->setSuffix( QString( " - " + mFftLabels.at( mpHi[i]->value() ) ) );
-        mLo[i] = (quint8)( mpLo[i]->value() );
-        mHi[i] = (quint8)( mpHi[i]->value() );
-    }
-    AudioUpdateBuckets( mLo, mHi );
 }
 
 void cLP2::HandleEffectClicked( QListWidgetItem* pItem )
@@ -625,6 +661,41 @@ void cLP2::Save( void )
 {
     QByteArray data( MESSAGE_LENGTH-1, 0 );
     SendCommand( Command_SAVE, data );
+
+    QSettings settings( SETTINGS_FILE, QSettings::NativeFormat );
+
+    settings.setValue( SETTINGS_HYSTERESIS, mpHysteresis->value() );
+    settings.setValue( SETTINGS_THRESHOLD, mpThreshold->value() );
+    settings.setValue( SETTINGS_AVERAGING, mpAveraging->value() );
+    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        settings.setValue( SETTINGS_LO + QString::number(i), mpLo[i]->value() );
+        settings.setValue( SETTINGS_HI + QString::number(i), mpHi[i]->value() );
+    }
+    settings.setValue( SETTINGS_SECONDS, mpSeconds->value() );
+    for( qint32 i=0; i<GLOBAL_NUM_BUCKETS; i++ )
+    {
+        settings.setValue( SETTINGS_TIME_FLAG + QString::number(i), mpTimeFlags[i]->isChecked() );
+    }
+
+    foreach( QListWidgetItem* pItem, mpEffects->selectedItems() )
+    {
+        quint32 effect = pItem->data( Qt::UserRole ).toUInt();
+        settings.setValue( SETTINGS_EFFECT + QString::number(effect), pItem->isSelected() );
+    }
+
+    settings.setValue( SETTINGS_PULSE_SQUARE_SOURCE, mpPulseSquareSourceSpin->value() );
+    settings.setValue( SETTINGS_PULSE_SQUARE_LENGTH, mpPulseSquareLengthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_SQUARE_WIDTH, mpPulseSquareWidthSpin->value() );
+
+    settings.setValue( SETTINGS_PULSE_SINE_SOURCE, mpPulseSineSourceSpin->value() );
+    settings.setValue( SETTINGS_PULSE_SINE_LENGTH, mpPulseSineLengthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_SINE_WIDTH, mpPulseSineWidthSpin->value() );
+
+    settings.setValue( SETTINGS_DISTANCE_SQUARE_SOURCE, mpDistanceSquareSourceSpin->value() );
+    settings.setValue( SETTINGS_DISTANCE_SQUARE_START, mpDistanceSquareStartSpin->value() );
+    settings.setValue( SETTINGS_DISTANCE_SQUARE_STOP, mpDistanceSquareStopSpin->value() );
+    settings.setValue( SETTINGS_DISTANCE_SQUARE_AMP, mpDistanceSquareAmpSpin->value() );
 }
 
 void cLP2::Load( void )
@@ -635,16 +706,16 @@ void cLP2::Load( void )
 
 void cLP2::SendCommand( eCommand command, QByteArray data )
 {
-    char message[8] = {0};
+    char message[MESSAGE_LENGTH] = {0};
     message[0] = (char)command;
-    for( qint32 i=1; i<8; i++ )
+    for( qint32 i=1; i<MESSAGE_LENGTH; i++ )
     {
         message[i] = data.at(i-1);
     }
 
     if( mpSerial )
     {
-        mpSerial->write( message, 8 );
+        mpSerial->write( message, MESSAGE_LENGTH );
     }
 }
 

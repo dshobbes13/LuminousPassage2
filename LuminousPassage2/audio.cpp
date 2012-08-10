@@ -75,7 +75,7 @@ void AudioSave( void )
 #ifdef FIRMWARE
     cli();
     EEPROM.write( EEPROM_AUDIO_THRESHOLD, mThreshold );
-    EEPROM.write( EEPROM_AUDIO_AVERAGING, mAveraging );
+    EEPROM.write( EEPROM_AUDIO_AVERAGING, (quint8)( 255 * mAveraging ) );
     EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_0, mLo[0] );
     EEPROM.write( EEPROM_AUDIO_BUCKETS_HI_0, mHi[0] );
     EEPROM.write( EEPROM_AUDIO_BUCKETS_LO_1, mLo[1] );
@@ -97,7 +97,7 @@ void AudioLoad( void )
 #ifdef FIRMWARE
     cli();
     mThreshold = EEPROM.read( EEPROM_AUDIO_THRESHOLD );
-    mAveraging = EEPROM.read( EEPROM_AUDIO_AVERAGING );
+    mAveraging = ( (float)EEPROM.read( EEPROM_AUDIO_AVERAGING ) ) / 255;
     mLo[0] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_0 );
     mHi[0] = EEPROM.read( EEPROM_AUDIO_BUCKETS_HI_0 );
     mLo[1] = EEPROM.read( EEPROM_AUDIO_BUCKETS_LO_1 );
@@ -114,18 +114,10 @@ void AudioLoad( void )
 #endif
 }
 
-void AudioUpdateThreshold( quint8 threshold )
+void AudioSetParameters( quint8 threshold, float averaging, quint8* lo, quint8* hi )
 {
     mThreshold = threshold;
-}
-
-void AudioUpdateAveraging( float averaging )
-{
     mAveraging = averaging;
-}
-
-void AudioUpdateBuckets( quint8* lo, quint8* hi )
-{
     memcpy( mLo, lo, GLOBAL_NUM_BUCKETS );
     memcpy( mHi, hi, GLOBAL_NUM_BUCKETS );
 }

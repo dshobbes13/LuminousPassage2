@@ -17,15 +17,16 @@ enum eCommand
     Command_NULL            = 0,
     Command_SAVE            = 1,    // { }
     Command_LOAD            = 2,    // { }
-    Command_EFFECT          = 3,    // { Byte1 = Effect, Byte2 = On/Off }
-    Command_BUCKETS         = 4,    // { Byte1 = Hysteresis, Byte2 = SecondsFlags, Byte3 = Seconds }
-    Command_MANUAL          = 5,    // { Byte1 = Value }
-    Command_PULSE_SQUARE    = 6,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
-    Command_PULSE_SINE      = 7,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
-    Command_DISTANCE_SQUARE = 8,    // { Byte1 = Source, Byte2 = Start, Byte3 = Stop, Byte4 = Amp }
+    Command_AUDIO           = 3,    // { Treshold, Averaging, Lo0, Hi0, Lo1, Hi1, Lo2, Hi2, Lo3, Hi3, Lo4, Hi4, Lo5, Hi5 }
+    Command_EFFECT          = 4,    // { Byte1 = Effect, Byte2 = On/Off }
+    Command_BUCKETS         = 5,    // { Byte1 = Hysteresis, Byte2 = SecondsFlags, Byte3 = Seconds }
+    Command_MANUAL          = 6,    // { Byte1 = Value }
+    Command_PULSE_SQUARE    = 7,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
+    Command_PULSE_SINE      = 8,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
+    Command_DISTANCE_SQUARE = 9,    // { Byte1 = Source, Byte2 = Start, Byte3 = Stop, Byte4 = Amp }
 };
 
-#define MESSAGE_LENGTH  8
+#define MESSAGE_LENGTH  16
 
 //*****************
 // PUBLIC FUNCTIONS

@@ -145,6 +145,28 @@ void loop( void )
             PatternLoad();
             AudioLoad();
             break;
+        case Command_AUDIO:
+            {
+                quint8 threshold = ComGetByte( 0 );
+                quint8 averagingFixed = ComGetByte( 1 );
+                float averaging = ( (float)averagingFixed ) / 255;
+                quint8 lo[GLOBAL_NUM_BUCKETS];
+                quint8 hi[GLOBAL_NUM_BUCKETS];
+                lo[0] = ComGetByte( 2 );
+                hi[0] = ComGetByte( 3 );
+                lo[1] = ComGetByte( 4 );
+                hi[1] = ComGetByte( 5 );
+                lo[2] = ComGetByte( 6 );
+                hi[2] = ComGetByte( 7 );
+                lo[3] = ComGetByte( 8 );
+                hi[3] = ComGetByte( 9 );
+                lo[4] = ComGetByte( 10 );
+                hi[4] = ComGetByte( 11 );
+                lo[5] = ComGetByte( 12 );
+                hi[5] = ComGetByte( 13 );
+                AudioSetParameters( threshold, averaging, lo, hi );
+            }
+            break;
         case Command_EFFECT:
             {
                 quint8 effect = ComGetByte( 0 );

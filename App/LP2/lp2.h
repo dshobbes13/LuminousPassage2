@@ -62,10 +62,8 @@ private slots:
     void Read( void );
     void HandleNewMessage( QByteArray message );
     void HandleUpdatedPattern( quint8* newPattern );
-    void UpdateThreshold( void );
-    void UpdateAveraging( double averaging );
+    void UpdateAudioParameters( void );
     void UpdateBucketParameters( void );
-    void UpdateBuckets( void );
     void HandleBucketSliders( void );
     void HandleEffectClicked( QListWidgetItem* pItem );
     void HandleManual( void );
