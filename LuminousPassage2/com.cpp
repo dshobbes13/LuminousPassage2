@@ -19,7 +19,7 @@
 
 //#define DEBUG
 
-#define BUFFER_LENGTH   16
+#define BUFFER_LENGTH   32
 
 #define TIMEOUT         10
 

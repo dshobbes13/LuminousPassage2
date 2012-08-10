@@ -10,8 +10,8 @@
 #define FIRMWARE
 
 
-#define MASTER_SINGLE
-//#define MASTER
+//#define MASTER_SINGLE
+#define MASTER
 //#define SLAVE_0
 //#define SLAVE_1
 //#define SLAVE_2

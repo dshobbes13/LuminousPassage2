@@ -40,7 +40,6 @@
 
 volatile static unsigned char mReadReady = 0;
 volatile static unsigned char mCurrentByte = 0;
-volatile static unsigned char mBytes[GLOBAL_NUM_CHANNELS] = {0};
 
 
 //*****************
@@ -110,7 +109,7 @@ void ComSlaveData( unsigned char* data )
 {
     cli();
 
-    memcpy( data, (void*)mBytes, GLOBAL_NUM_CHANNELS );
+    memcpy( data, (void*)gComMasterSlaveBytes, GLOBAL_NUM_CHANNELS );
     mReadReady = 0;
 
     sei();
@@ -128,7 +127,7 @@ void TwiRead( unsigned char* data, int length )
 #endif
     if( ( GLOBAL_NUM_CHANNELS - mCurrentByte ) > length )
     {
-        memcpy( (void*)&mBytes[mCurrentByte], data, length );
+        memcpy( (void*)&gComMasterSlaveBytes[mCurrentByte], data, length );
     }
     mCurrentByte += length;
     if( mCurrentByte >= GLOBAL_NUM_CHANNELS )
@@ -161,7 +160,7 @@ ISR( TWI_vect )
 
     case TWSR_STATUS_SL_ADDR_DATA:
     case TWSR_STATUS_SL_GCALL_DATA:
-        mBytes[mCurrentByte++] = TWDR;
+        gComMasterSlaveBytes[mCurrentByte++] = TWDR;
         TWCR = _BV( TWINT ) | _BV( TWEA ) | _BV( TWEN ) | _BV( TWIE );
         break;
 

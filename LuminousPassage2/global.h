@@ -17,4 +17,6 @@
 
 #define GLOBAL_NUM_SINGLE_CH    10
 
+extern volatile unsigned char gComMasterSlaveBytes[GLOBAL_NUM_CHANNELS];
+
 #endif
