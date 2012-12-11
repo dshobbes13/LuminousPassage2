@@ -33,7 +33,7 @@
 
 #define MAX_SIMULTANEOUS        4
 
-#define MIN_BUCKET_THRESHOLD    50
+#define MIN_BUCKET_THRESHOLD    25
 
 
 #ifdef SOFTWARE
@@ -87,6 +87,7 @@ volatile static quint8 mPulseSquareTicks[MAX_SIMULTANEOUS] = {0};
 volatile static quint8 mPulseSineSource = 1;
 volatile static quint8 mPulseSineLength = 40;
 volatile static quint8 mPulseSineWidth = 10;
+volatile static quint8 mPulseSineSpeed = 5;
 volatile static quint8 mPulseSineInput[MAX_SIMULTANEOUS] = {0};
 volatile static quint8 mPulseSineTicks[MAX_SIMULTANEOUS] = {0};
 
@@ -95,6 +96,39 @@ volatile static quint8 mDistanceSquareSource = 2;
 volatile static quint8 mDistanceSquareStart = 50;
 volatile static quint8 mDistanceSquareStop = 59;
 volatile static quint8 mDistanceSquareAmplification = 1;
+
+// Effect_SWING
+volatile static quint8 mSwingSource = 5;
+volatile static quint8 mSwingStart = 0;
+volatile static quint8 mSwingStop = 49;
+volatile static quint16 mSwingPeriod = 200;
+volatile static quint8 mSwingInput = 0;
+volatile static quint8 mSwingAmp = 0;
+#define SWING_AMP_MAX 10
+volatile static quint8 mSwingAtRest = 1;
+volatile static quint8 mSwingWaitingForNext = 1;
+volatile static quint16 mSwingLastDiff = 0;
+
+// Effect_PULSE_CENTER
+volatile static quint8 mPulseCenterSource = 1;
+volatile static quint8 mPulseCenterWidth = 8;
+volatile static quint8 mPulseCenterSpeed = 5;
+volatile static quint8 mPulseCenterInput[MAX_SIMULTANEOUS] = {0};
+volatile static quint8 mPulseCenterTicks[MAX_SIMULTANEOUS] = {0};
+
+// Effect_DROP_CYCLE
+volatile static quint8 mDropCycleSource = 1;
+volatile static quint8 mDropCycleSpeed = 10;
+volatile static quint8 mDropCycleInput = 0;
+volatile static quint8 mDropCycleCount = 0;
+
+// Effect_PULSE_RIGHT
+volatile static quint8 mPulseRightSource = 1;
+volatile static quint8 mPulseRightLength = 40;
+volatile static quint8 mPulseRightWidth = 10;
+volatile static quint8 mPulseRightSpeed = 5;
+volatile static quint8 mPulseRightInput[MAX_SIMULTANEOUS] = {0};
+volatile static quint8 mPulseRightTicks[MAX_SIMULTANEOUS] = {0};
 
 // Buckets to digital inputs
 volatile static quint8 mBucketState[GLOBAL_NUM_BUCKETS] = {0};
@@ -148,6 +182,8 @@ void PatternSave( void )
         EEPROM.write( EEPROM_PATTERN_EFFECT_START + i, mEffects[i] );
     }
 
+    EEPROM.write( EEPROM_PATTERN_MANUAL_VALUE, mManualValue );
+
     EEPROM.write( EEPROM_PATTERN_BUCKET_HYSTERESIS, (quint8)( 255 * mBucketHysteresis ) );
     EEPROM.write( EEPROM_PATTERN_BUCKET_TIME_FLAGS, mBucketTimeDebounceFlags );
     EEPROM.write( EEPROM_PATTERN_BUCKET_TIME_SECS,  mBucketTimeDebounceSeconds );
@@ -159,11 +195,30 @@ void PatternSave( void )
     EEPROM.write( EEPROM_PATTERN_PULSE_SINE_SOURCE, mPulseSineSource );
     EEPROM.write( EEPROM_PATTERN_PULSE_SINE_LENGTH, mPulseSineLength );
     EEPROM.write( EEPROM_PATTERN_PULSE_SINE_WIDTH, mPulseSineWidth );
+    EEPROM.write( EEPROM_PATTERN_PULSE_SINE_SPEED, mPulseSineSpeed );
 
     EEPROM.write( EEPROM_PATTERN_DISTANCE_SQUARE_SOURCE, mDistanceSquareSource );
     EEPROM.write( EEPROM_PATTERN_DISTANCE_SQUARE_START, mDistanceSquareStart );
     EEPROM.write( EEPROM_PATTERN_DISTANCE_SQUARE_STOP, mDistanceSquareStop );
     EEPROM.write( EEPROM_PATTERN_DISTANCE_SQUARE_AMP, mDistanceSquareAmplification );
+
+    EEPROM.write( EEPROM_PATTERN_SWING_SOURCE, mSwingSource );
+    EEPROM.write( EEPROM_PATTERN_SWING_START, mSwingStart );
+    EEPROM.write( EEPROM_PATTERN_SWING_STOP, mSwingStop );
+    EEPROM.write( EEPROM_PATTERN_SWING_PERIOD_HI, (quint8)( mSwingPeriod >> 8 ) );
+    EEPROM.write( EEPROM_PATTERN_SWING_PERIOD_LO, (quint8)mSwingPeriod );
+
+    EEPROM.write( EEPROM_PATTERN_PULSE_CENTER_SOURCE, mPulseCenterSource );
+    EEPROM.write( EEPROM_PATTERN_PULSE_CENTER_WIDTH, mPulseCenterWidth );
+    EEPROM.write( EEPROM_PATTERN_PULSE_CENTER_SPEED, mPulseCenterSpeed );
+
+    EEPROM.write( EEPROM_PATTERN_DROP_CYCLE_SOURCE, mDropCycleSource );
+    EEPROM.write( EEPROM_PATTERN_DROP_CYCLE_SPEED, mDropCycleSpeed );
+
+    EEPROM.write( EEPROM_PATTERN_PULSE_RIGHT_SOURCE, mPulseRightSource );
+    EEPROM.write( EEPROM_PATTERN_PULSE_RIGHT_LENGTH, mPulseRightLength );
+    EEPROM.write( EEPROM_PATTERN_PULSE_RIGHT_WIDTH, mPulseRightWidth );
+    EEPROM.write( EEPROM_PATTERN_PULSE_RIGHT_SPEED, mPulseRightSpeed );
     sei();
 #endif
 }
@@ -177,6 +232,8 @@ void PatternLoad( void )
         mEffects[i] = EEPROM.read( EEPROM_PATTERN_EFFECT_START + i );
     }
 
+    mManualValue = EEPROM.read( EEPROM_PATTERN_MANUAL_VALUE );
+
     mBucketHysteresis = ( (float)EEPROM.read( EEPROM_PATTERN_BUCKET_HYSTERESIS ) ) / 255;
     mBucketTimeDebounceFlags = EEPROM.read( EEPROM_PATTERN_BUCKET_TIME_FLAGS );
     mBucketTimeDebounceSeconds = EEPROM.read( EEPROM_PATTERN_BUCKET_TIME_SECS );
@@ -188,11 +245,30 @@ void PatternLoad( void )
     mPulseSineSource = EEPROM.read( EEPROM_PATTERN_PULSE_SINE_SOURCE );
     mPulseSineLength = EEPROM.read( EEPROM_PATTERN_PULSE_SINE_LENGTH );
     mPulseSineWidth = EEPROM.read( EEPROM_PATTERN_PULSE_SINE_WIDTH );
+    mPulseSineSpeed = EEPROM.read( EEPROM_PATTERN_PULSE_SINE_SPEED );
 
     mDistanceSquareSource = EEPROM.read( EEPROM_PATTERN_DISTANCE_SQUARE_SOURCE );
     mDistanceSquareStart = EEPROM.read( EEPROM_PATTERN_DISTANCE_SQUARE_START );
     mDistanceSquareStop = EEPROM.read( EEPROM_PATTERN_DISTANCE_SQUARE_STOP );
     mDistanceSquareAmplification = EEPROM.read( EEPROM_PATTERN_DISTANCE_SQUARE_AMP );
+
+    mSwingSource = EEPROM.read( EEPROM_PATTERN_SWING_SOURCE );
+    mSwingStart = EEPROM.read( EEPROM_PATTERN_SWING_START );
+    mSwingStop = EEPROM.read( EEPROM_PATTERN_SWING_STOP );
+    mSwingPeriod = (quint16)EEPROM.read( EEPROM_PATTERN_SWING_PERIOD_HI ) << 8;
+    mSwingPeriod += EEPROM.read( EEPROM_PATTERN_SWING_PERIOD_LO );
+
+    mPulseCenterSource = EEPROM.read( EEPROM_PATTERN_PULSE_CENTER_SOURCE );
+    mPulseCenterWidth = EEPROM.read( EEPROM_PATTERN_PULSE_CENTER_WIDTH );
+    mPulseCenterSpeed = EEPROM.read( EEPROM_PATTERN_PULSE_CENTER_SPEED );
+
+    mDropCycleSource = EEPROM.read( EEPROM_PATTERN_DROP_CYCLE_SOURCE );
+    mDropCycleSpeed = EEPROM.read( EEPROM_PATTERN_DROP_CYCLE_SPEED );
+
+    mPulseRightSource = EEPROM.read( EEPROM_PATTERN_PULSE_RIGHT_SOURCE );
+    mPulseRightLength = EEPROM.read( EEPROM_PATTERN_PULSE_RIGHT_LENGTH );
+    mPulseRightWidth = EEPROM.read( EEPROM_PATTERN_PULSE_RIGHT_WIDTH );
+    mPulseRightSpeed = EEPROM.read( EEPROM_PATTERN_PULSE_RIGHT_SPEED );
     sei();
 #endif
 }
@@ -226,6 +302,31 @@ void PatternSetEffect( eEffect effect, quint8 on )
         break;
     case Effect_DISTANCE_SQUARE:
         break;
+    case Effect_SWING:
+        mSwingInput = 0;
+        mSwingAmp = 0.0;
+        mSwingAtRest = 1;
+        mSwingWaitingForNext = 1;
+        mSwingLastDiff = 0;
+        break;
+    case Effect_PULSE_CENTER:
+        for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+        {
+            mPulseCenterInput[i] = 0;
+            mPulseCenterTicks[i] = 0;
+        }
+        break;
+    case Effect_DROP_CYCLE:
+        mDropCycleInput = 0;
+        mDropCycleCount = 0;
+        break;
+    case Effect_PULSE_RIGHT:
+        for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+        {
+            mPulseRightInput[i] = 0;
+            mPulseRightTicks[i] = 0;
+        }
+        break;
     default:
         break;
     }
@@ -255,21 +356,59 @@ void PatternSetPulseSquare( quint8 source, quint8 length, quint8 width )
     sei();
 }
 
-void PatternSetPulseSine( quint8 source, quint8 length, quint8 width )
+void PatternSetPulseSine( quint8 source, quint8 length, quint8 width, quint8 speed )
 {
     cli();
     mPulseSineSource = source;
     mPulseSineLength = length;
     mPulseSineWidth = width;
+    mPulseSineSpeed = speed;
     sei();
 }
 
 void PatternSetDistanceSquare( quint8 source, quint8 start, quint8 stop, quint8 amp )
 {
+    cli();
     mDistanceSquareSource = source;
     mDistanceSquareStart = start;
     mDistanceSquareStop = stop;
     mDistanceSquareAmplification = amp;
+    sei();
+}
+
+void PatternSetSwing( quint8 source, quint8 start, quint8 stop, quint16 period )
+{
+    cli();
+    mSwingSource = source;
+    mSwingStart = start;
+    mSwingStop = stop;
+    mSwingPeriod = period;
+    sei();
+}
+
+void PatternSetPulseCenter( quint8 source, quint8 width, quint8 speed )
+{
+    cli();
+    mPulseCenterSource = source;
+    mPulseCenterWidth = width;
+    mPulseCenterSpeed = speed;
+    sei();
+}
+
+void PatternSetDropCycle( quint8 source, quint8 speed )
+{
+    mDropCycleSource = source;
+    mDropCycleSpeed = speed;
+}
+
+void PatternSetPulseRight( quint8 source, quint8 length, quint8 width, quint8 speed )
+{
+    cli();
+    mPulseRightSource = source;
+    mPulseRightLength = length;
+    mPulseRightWidth = width;
+    mPulseRightSpeed = speed;
+    sei();
 }
 
 quint8 PatternReady( void )
@@ -391,6 +530,49 @@ void PatternUpdateBuckets( quint16* newBuckets, quint16* newBucketAverages )
                     }
                 }
 
+                // Swing input
+                if( mSwingSource == i )
+                {
+                    mSwingInput = 1;
+                }
+
+                // Find open pulse center input
+                if( mPulseCenterSource == i )
+                {
+                    for( quint8 j=0; j<MAX_SIMULTANEOUS; j++ )
+                    {
+                        if( !mPulseCenterInput[j] )
+                        {
+                            mPulseCenterInput[j] = 1;
+                            mPulseCenterTicks[j] = 0;
+                            break;
+                        }
+                    }
+                }
+
+                // Drop cycle input
+                if( mDropCycleSource == i )
+                {
+                    if( !mDropCycleInput )
+                    {
+                        mDropCycleInput = 1;
+                    }
+                }
+
+                // Find open pulse right input
+                if( mPulseRightSource == i )
+                {
+                    for( quint8 j=0; j<MAX_SIMULTANEOUS; j++ )
+                    {
+                        if( !mPulseRightInput[j] )
+                        {
+                            mPulseRightInput[j] = 1;
+                            mPulseRightTicks[j] = 0;
+                            break;
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -434,7 +616,7 @@ void PatternProcessInternal( void )
     {
         for( quint8 i=0; i<GLOBAL_NUM_CHANNELS; i++ )
         {
-            mPatternChannels[i] += 0x80;
+            mPatternChannels[i] += 0xFF;
         }
     }
 
@@ -542,7 +724,7 @@ void PatternProcessInternal( void )
                     qint8 distance = tick - j;
                     if( ( distance >= 0 ) && ( distance < mPulseSquareWidth ) )
                     {
-                        mPatternChannels[j] += 0x7F;
+                        mPatternChannels[j] -= 0x7F;
                     }
                 }
             }
@@ -553,7 +735,7 @@ void PatternProcessInternal( void )
     if( mEffects[Effect_PULSE_SINE] )
     {
         quint16 diff = mTick - mLastTick[Effect_PULSE_SINE];
-        if( diff >= (quint16)5 )
+        if( diff >= (quint16)mPulseSineSpeed )
         {
             mLastTick[Effect_PULSE_SINE] = mTick;
             for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
@@ -582,7 +764,7 @@ void PatternProcessInternal( void )
                         float percent = (float)distance / mPulseSineWidth;
                         quint8 sinIndex = 128 * percent;
                         quint8 sinValue = Sin( sinIndex );
-                        mPatternChannels[j] += sinValue;
+                        mPatternChannels[j] -= 2 * sinValue;
                     }
                 }
             }
@@ -600,6 +782,211 @@ void PatternProcessInternal( void )
             mPatternChannels[i] += value;
         }
     }
+
+    // Effect_SWING
+    if( mEffects[Effect_SWING] )
+    {
+        quint16 diff = mTick - mLastTick[Effect_SWING];
+        if( mSwingAtRest )
+        {
+            if( mSwingInput )
+            {
+                // First input
+                mSwingAtRest = 0;
+                mSwingInput = 0;
+                mLastTick[Effect_SWING] = mTick;
+                diff = 0;
+                mSwingWaitingForNext = 0;
+                mSwingAmp = 5;
+            }
+        }
+        else
+        {
+            // Check if new input
+            if( mSwingInput )
+            {
+                mSwingInput = 0;
+                if( mSwingWaitingForNext )
+                {
+                    if( ( diff < ( mSwingPeriod * 0.25 ) ) ||
+                        ( diff > ( mSwingPeriod * 0.75 ) ) )
+                    {
+                        // On time
+                        mSwingWaitingForNext = 0;
+                        if( mSwingAmp < SWING_AMP_MAX )
+                        {
+                            mSwingAmp++;
+                        }
+                    }
+                    else
+                    {
+                        // Too early
+                        if( mSwingAmp > 0 )
+                        {
+                            mSwingAmp--;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Check to reset waiting for next
+                if( ( mSwingLastDiff <= ( mSwingPeriod * 0.25 ) ) &&
+                    ( diff           >  ( mSwingPeriod * 0.25 ) ) )
+                {
+                    // Check for too long
+                    if( mSwingWaitingForNext )
+                    {
+                        if( mSwingAmp > 0 )
+                        {
+                            mSwingAmp--;
+                        }
+                    }
+                    mSwingWaitingForNext = 1;
+                }
+                mSwingLastDiff = diff;
+            }
+        }
+
+        if( !mSwingAtRest )
+        {
+            // Make the swing
+            float percent = (float)diff / mSwingPeriod;
+            quint8 percentFixed = (quint8)( percent * 0xFF );
+            qint8 sinValue = Sin( percentFixed ) * ( (float)mSwingAmp / SWING_AMP_MAX );
+            if( diff > 100 )
+            {
+                qint8 test = 1;
+            }
+            for( quint8 i=mSwingStart; i<mSwingStop; i++ )
+            {
+                mPatternChannels[i] += sinValue;
+            }
+
+            // Find zero cross
+            if( diff >= mSwingPeriod )
+            {
+                // Zero the tick count
+                mLastTick[Effect_SWING] = mTick;
+                if( mSwingAmp == 0 )
+                {
+                    mSwingAtRest = 1;
+                }
+            }
+        }
+    }
+
+    // Effect_PULSE_CENTER
+    if( mEffects[Effect_PULSE_CENTER] )
+    {
+        quint16 diff = mTick - mLastTick[Effect_PULSE_CENTER];
+        if( diff >= (quint16)mPulseCenterSpeed )
+        {
+            mLastTick[Effect_PULSE_CENTER] = mTick;
+            for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+            {
+                if( mPulseCenterInput[i] )
+                {
+                    if( ++mPulseCenterTicks[i] > ( 15 + mPulseCenterWidth ) )
+                    {
+                        mPulseCenterTicks[i] = 0;
+                        mPulseCenterInput[i] = 0;
+                    }
+                }
+            }
+        }
+
+        for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+        {
+            if( mPulseCenterInput[i] )
+            {
+                quint8 tick = mPulseCenterTicks[i];
+                for( quint8 j=0; j<15; j++ )
+                {
+                    qint8 distance = tick - j;
+                    if( ( distance >= 0 ) && ( distance <= mPulseCenterWidth ) )
+                    {
+                        float percent = (float)distance / mPulseCenterWidth;
+                        quint8 sinIndex = 128 * percent;
+                        quint8 sinValue = Sin( sinIndex );
+                        mPatternChannels[14+j] -= 2 * sinValue;
+                        mPatternChannels[14-j] -= 2 * sinValue;
+                    }
+                }
+            }
+        }
+    }
+
+    // Effect_DROP_CYCLE
+    if( mEffects[Effect_DROP_CYCLE] )
+    {
+        quint16 diff = mTick - mLastTick[Effect_DROP_CYCLE];
+        if( mDropCycleInput )
+        {
+            for( quint8 i=0; i<40; i++ )
+            {
+                mPatternChannels[i] = 0x00;
+            }
+            if( diff >= (quint16)mDropCycleSpeed )
+            {
+                mLastTick[Effect_DROP_CYCLE] = mTick;
+                if( ++mDropCycleCount >= 40 )
+                {
+                    mDropCycleCount = 0;
+                    mDropCycleInput = 0;
+                }
+            }
+            mPatternChannels[mDropCycleCount] = 0xFF;
+        }
+        else
+        {
+            for( quint8 i=0; i<40; i++ )
+            {
+                mPatternChannels[i] = 0xFF;
+            }
+        }
+    }
+
+    // Effect_PULSE_RIGHT
+    if( mEffects[Effect_PULSE_RIGHT] )
+    {
+        quint16 diff = mTick - mLastTick[Effect_PULSE_RIGHT];
+        if( diff >= (quint16)mPulseRightSpeed )
+        {
+            mLastTick[Effect_PULSE_RIGHT] = mTick;
+            for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+            {
+                if( mPulseRightInput[i] )
+                {
+                    if( ++mPulseRightTicks[i] > ( mPulseRightLength + mPulseRightWidth ) )
+                    {
+                        mPulseRightTicks[i] = 0;
+                        mPulseRightInput[i] = 0;
+                    }
+                }
+            }
+        }
+
+        for( quint8 i=0; i<MAX_SIMULTANEOUS; i++ )
+        {
+            if( mPulseRightInput[i] )
+            {
+                quint8 tick = mPulseRightTicks[i];
+                for( quint8 j=0; j<mPulseRightLength; j++ )
+                {
+                    qint8 distance = tick - j;
+                    if( ( distance >= 0 ) && ( distance <= mPulseRightWidth ) )
+                    {
+                        float percent = (float)distance / mPulseRightWidth;
+                        quint8 sinIndex = 128 * percent;
+                        quint8 sinValue = Sin( sinIndex );
+                        mPatternChannels[39-j] -= 2 * sinValue;
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 #if defined( PATTERN_ISR_VERSION ) && !defined( SOFTWARE )

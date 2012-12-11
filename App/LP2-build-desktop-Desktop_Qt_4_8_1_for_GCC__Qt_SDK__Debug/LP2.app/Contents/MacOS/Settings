@@ -5,13 +5,43 @@
 	<key>Averaging</key>
 	<real>0.90000000000000002</real>
 	<key>DistanceSquareAmp</key>
-	<integer>1</integer>
-	<key>DistanceSquareSource</key>
 	<integer>2</integer>
+	<key>DistanceSquareSource</key>
+	<integer>0</integer>
 	<key>DistanceSquareStart</key>
-	<integer>50</integer>
+	<integer>0</integer>
 	<key>DistanceSquareStop</key>
-	<integer>59</integer>
+	<integer>58</integer>
+	<key>DropCycleSource</key>
+	<integer>0</integer>
+	<key>DropCycleSpeed</key>
+	<integer>5</integer>
+	<key>Effect0</key>
+	<false/>
+	<key>Effect1</key>
+	<true/>
+	<key>Effect10</key>
+	<true/>
+	<key>Effect11</key>
+	<false/>
+	<key>Effect12</key>
+	<true/>
+	<key>Effect2</key>
+	<false/>
+	<key>Effect3</key>
+	<false/>
+	<key>Effect4</key>
+	<false/>
+	<key>Effect5</key>
+	<false/>
+	<key>Effect6</key>
+	<false/>
+	<key>Effect7</key>
+	<true/>
+	<key>Effect8</key>
+	<true/>
+	<key>Effect9</key>
+	<false/>
 	<key>Hi0</key>
 	<integer>2</integer>
 	<key>Hi1</key>
@@ -21,11 +51,11 @@
 	<key>Hi3</key>
 	<integer>16</integer>
 	<key>Hi4</key>
-	<integer>32</integer>
+	<integer>26</integer>
 	<key>Hi5</key>
 	<integer>63</integer>
 	<key>Hysteresis</key>
-	<real>0.40000000000000002</real>
+	<real>0.29999999999999999</real>
 	<key>Lo0</key>
 	<integer>1</integer>
 	<key>Lo1</key>
@@ -37,25 +67,51 @@
 	<key>Lo4</key>
 	<integer>17</integer>
 	<key>Lo5</key>
-	<integer>33</integer>
+	<integer>42</integer>
+	<key>ManualValue</key>
+	<integer>152</integer>
+	<key>PulseCenterSource</key>
+	<integer>0</integer>
+	<key>PulseCenterSpeed</key>
+	<integer>5</integer>
+	<key>PulseCenterWidth</key>
+	<integer>8</integer>
+	<key>PulseRightLength</key>
+	<integer>40</integer>
+	<key>PulseRightSource</key>
+	<integer>1</integer>
+	<key>PulseRightSpeed</key>
+	<integer>5</integer>
+	<key>PulseRightWidth</key>
+	<integer>10</integer>
 	<key>PulseSineLength</key>
-	<integer>0</integer>
+	<integer>40</integer>
 	<key>PulseSineSource</key>
-	<integer>0</integer>
+	<integer>1</integer>
+	<key>PulseSineSpeed</key>
+	<integer>5</integer>
 	<key>PulseSineWidth</key>
-	<integer>0</integer>
+	<integer>10</integer>
 	<key>PulseSquareLength</key>
-	<integer>0</integer>
+	<integer>29</integer>
 	<key>PulseSquareSource</key>
-	<integer>0</integer>
+	<integer>1</integer>
 	<key>PulseSquareWidth</key>
-	<integer>0</integer>
+	<integer>10</integer>
 	<key>Seconds</key>
-	<integer>0</integer>
+	<integer>10</integer>
+	<key>SwingPeriod</key>
+	<integer>200</integer>
+	<key>SwingSource</key>
+	<integer>5</integer>
+	<key>SwingStart</key>
+	<integer>40</integer>
+	<key>SwingStop</key>
+	<integer>58</integer>
 	<key>Threshold</key>
 	<integer>8</integer>
 	<key>TimeFlag0</key>
-	<false/>
+	<true/>
 	<key>TimeFlag1</key>
 	<false/>
 	<key>TimeFlag2</key>

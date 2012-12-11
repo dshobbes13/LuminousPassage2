@@ -36,8 +36,8 @@
 // DEFINITIONS
 //******************
 
-#define READ_TIMEOUT        15
-#define READ_BUFFER_LENGTH  1024
+#define READ_TIMEOUT        25
+#define READ_BUFFER_LENGTH  4096
 #define MESSAGE_LENGTH_RX   64
 
 #define MAX_MESSAGE_COUNT   50
@@ -54,6 +54,8 @@
 
 #define SETTINGS_EFFECT         "Effect"
 
+#define SETTINGS_MANUAL_VALUE   "ManualValue"
+
 #define SETTINGS_PULSE_SQUARE_SOURCE    "PulseSquareSource"
 #define SETTINGS_PULSE_SQUARE_LENGTH    "PulseSquareLength"
 #define SETTINGS_PULSE_SQUARE_WIDTH     "PulseSquareWidth"
@@ -61,11 +63,29 @@
 #define SETTINGS_PULSE_SINE_SOURCE    "PulseSineSource"
 #define SETTINGS_PULSE_SINE_LENGTH    "PulseSineLength"
 #define SETTINGS_PULSE_SINE_WIDTH     "PulseSineWidth"
+#define SETTINGS_PULSE_SINE_SPEED     "PulseSineSpeed"
 
 #define SETTINGS_DISTANCE_SQUARE_SOURCE     "DistanceSquareSource"
 #define SETTINGS_DISTANCE_SQUARE_START      "DistanceSquareStart"
 #define SETTINGS_DISTANCE_SQUARE_STOP       "DistanceSquareStop"
 #define SETTINGS_DISTANCE_SQUARE_AMP        "DistanceSquareAmp"
+
+#define SETTINGS_SWING_SOURCE   "SwingSource"
+#define SETTINGS_SWING_START    "SwingStart"
+#define SETTINGS_SWING_STOP     "SwingStop"
+#define SETTINGS_SWING_PERIOD   "SwingPeriod"
+
+#define SETTINGS_PULSE_CENTER_SOURCE    "PulseCenterSource"
+#define SETTINGS_PULSE_CENTER_WIDTH     "PulseCenterWidth"
+#define SETTINGS_PULSE_CENTER_SPEED     "PulseCenterSpeed"
+
+#define SETTINGS_DROP_CYCLE_SOURCE    "DropCycleSource"
+#define SETTINGS_DROP_CYCLE_SPEED     "DropCycleSpeed"
+
+#define SETTINGS_PULSE_RIGHT_SOURCE    "PulseRightSource"
+#define SETTINGS_PULSE_RIGHT_LENGTH    "PulseRightLength"
+#define SETTINGS_PULSE_RIGHT_WIDTH     "PulseRightWidth"
+#define SETTINGS_PULSE_RIGHT_SPEED     "PulseRightSpeed"
 
 //******************
 // CLASS
@@ -158,12 +178,12 @@ cLP2::cLP2( QWidget* pParent )
     {
         mpLo[i] = new QSpinBox( this );
         mpHi[i] = new QSpinBox( this );
-        mpLo[i]->setRange( 0, GLOBAL_NUM_FREQ-1 );
-        mpHi[i]->setRange( 0, GLOBAL_NUM_FREQ-1 );
+        mpLo[i]->setRange( 1, GLOBAL_NUM_FREQ-1 );
+        mpHi[i]->setRange( 1, GLOBAL_NUM_FREQ-1 );
         mpLo[i]->setValue( settings.value( SETTINGS_LO + QString::number(i), 0 ).toUInt() );
         mpHi[i]->setValue( settings.value( SETTINGS_HI + QString::number(i), 0 ).toUInt() );
-        connect( mpLo[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
-        connect( mpHi[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateBucketParameters() ) );
+        connect( mpLo[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateAudioParameters() ) );
+        connect( mpHi[i], SIGNAL( valueChanged( int ) ), this, SLOT( UpdateAudioParameters() ) );
     }
 
     mpHysteresis = new QDoubleSpinBox( this );
@@ -205,6 +225,7 @@ cLP2::cLP2( QWidget* pParent )
     // Effect MANUAL
     mpManualValueSlider = new QSlider( Qt::Horizontal, this );
     mpManualValueSlider->setRange( 0, 255 );
+    mpManualValueSlider->setValue( settings.value( SETTINGS_MANUAL_VALUE, 128 ).toUInt() );
     connect( mpManualValueSlider, SIGNAL( valueChanged( int ) ), this, SLOT( HandleManual() ) );
 
     // Effect PULSE SQUARE
@@ -234,12 +255,17 @@ cLP2::cLP2( QWidget* pParent )
     mpPulseSineWidthSpin = new QSpinBox( this );
     mpPulseSineWidthSpin->setRange( 0, 64 );
     mpPulseSineWidthSpin->setSuffix( " width" );
-    mpPulseSquareSourceSpin->setValue( settings.value( SETTINGS_PULSE_SINE_SOURCE, 1 ).toUInt() );
-    mpPulseSquareLengthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_LENGTH, 40 ).toUInt() );
-    mpPulseSquareWidthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_WIDTH, 10 ).toUInt() );
+    mpPulseSineSpeedSpin = new QSpinBox( this );
+    mpPulseSineSpeedSpin->setRange( 0, 10 );
+    mpPulseSineSpeedSpin->setSuffix( " speed" );
+    mpPulseSineSourceSpin->setValue( settings.value( SETTINGS_PULSE_SINE_SOURCE, 1 ).toUInt() );
+    mpPulseSineLengthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_LENGTH, 40 ).toUInt() );
+    mpPulseSineWidthSpin->setValue( settings.value( SETTINGS_PULSE_SINE_WIDTH, 10 ).toUInt() );
+    mpPulseSineSpeedSpin->setValue( settings.value( SETTINGS_PULSE_SINE_SPEED, 5 ).toUInt() );
     connect( mpPulseSineSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
     connect( mpPulseSineLengthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
     connect( mpPulseSineWidthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
+    connect( mpPulseSineSpeedSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseSine() ) );
 
     // Effect DISTANCE SQUARE
     mpDistanceSquareSourceSpin = new QSpinBox( this );
@@ -262,6 +288,79 @@ cLP2::cLP2( QWidget* pParent )
     connect( mpDistanceSquareStartSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
     connect( mpDistanceSquareStopSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
     connect( mpDistanceSquareAmpSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDistanceSquare() ) );
+
+    // Effect_SWING
+    mpSwingSourceSpin = new QSpinBox( this );
+    mpSwingSourceSpin->setRange( 0, 5 );
+    mpSwingSourceSpin->setSuffix( " source" );
+    mpSwingStartSpin = new QSpinBox( this );
+    mpSwingStartSpin->setRange( 0, GLOBAL_NUM_CHANNELS );
+    mpSwingStartSpin->setSuffix( " start" );
+    mpSwingStopSpin = new QSpinBox( this );
+    mpSwingStopSpin->setRange( 0, GLOBAL_NUM_CHANNELS );
+    mpSwingStopSpin->setSuffix( " stop" );
+    mpSwingPeriodSpin = new QSpinBox( this );
+    mpSwingPeriodSpin->setRange( 0, 500 );
+    mpSwingPeriodSpin->setSuffix( " period (1/100)s" );
+    mpSwingSourceSpin->setValue( settings.value( SETTINGS_SWING_SOURCE, 5 ).toUInt() );
+    mpSwingStartSpin->setValue( settings.value( SETTINGS_SWING_START, 0 ).toUInt() );
+    mpSwingStopSpin->setValue( settings.value( SETTINGS_SWING_STOP, 49 ).toUInt() );
+    mpSwingPeriodSpin->setValue( settings.value( SETTINGS_SWING_PERIOD, 200 ).toUInt() );
+    connect( mpSwingSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleSwing() ) );
+    connect( mpSwingStartSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleSwing() ) );
+    connect( mpSwingStopSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleSwing() ) );
+    connect( mpSwingPeriodSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleSwing() ) );
+
+    // Effect PULSE CENTER
+    mpPulseCenterSourceSpin = new QSpinBox( this );
+    mpPulseCenterSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
+    mpPulseCenterSourceSpin->setSuffix( " source" );
+    mpPulseCenterWidthSpin = new QSpinBox( this );
+    mpPulseCenterWidthSpin->setRange( 0, 64 );
+    mpPulseCenterWidthSpin->setSuffix( " width" );
+    mpPulseCenterSpeedSpin = new QSpinBox( this );
+    mpPulseCenterSpeedSpin->setRange( 0, 10 );
+    mpPulseCenterSpeedSpin->setSuffix( " speed" );
+    mpPulseCenterSourceSpin->setValue( settings.value( SETTINGS_PULSE_CENTER_SOURCE, 1 ).toUInt() );
+    mpPulseCenterWidthSpin->setValue( settings.value( SETTINGS_PULSE_CENTER_WIDTH, 8 ).toUInt() );
+    mpPulseCenterSpeedSpin->setValue( settings.value( SETTINGS_PULSE_CENTER_SPEED, 5 ).toUInt() );
+    connect( mpPulseCenterSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseCenter() ) );
+    connect( mpPulseCenterWidthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseCenter() ) );
+    connect( mpPulseCenterSpeedSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseCenter() ) );
+
+    // Effect DROP CYCLE
+    mpDropCycleSourceSpin = new QSpinBox( this );
+    mpDropCycleSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
+    mpDropCycleSourceSpin->setSuffix( " source" );
+    mpDropCycleSpeedSpin = new QSpinBox( this );
+    mpDropCycleSpeedSpin->setRange( 0, 64 );
+    mpDropCycleSpeedSpin->setSuffix( " speed" );
+    mpDropCycleSourceSpin->setValue( settings.value( SETTINGS_DROP_CYCLE_SOURCE, 1 ).toUInt() );
+    mpDropCycleSpeedSpin->setValue( settings.value( SETTINGS_DROP_CYCLE_SPEED, 5 ).toUInt() );
+    connect( mpDropCycleSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDropCycle() ) );
+    connect( mpDropCycleSpeedSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandleDropCycle() ) );
+
+    // Effect PULSE RIGHT
+    mpPulseRightSourceSpin = new QSpinBox( this );
+    mpPulseRightSourceSpin->setRange( 0, GLOBAL_NUM_BUCKETS );
+    mpPulseRightSourceSpin->setSuffix( " source" );
+    mpPulseRightLengthSpin = new QSpinBox( this );
+    mpPulseRightLengthSpin->setRange( 0, 64 );
+    mpPulseRightLengthSpin->setSuffix( " length" );
+    mpPulseRightWidthSpin = new QSpinBox( this );
+    mpPulseRightWidthSpin->setRange( 0, 64 );
+    mpPulseRightWidthSpin->setSuffix( " width" );
+    mpPulseRightSpeedSpin = new QSpinBox( this );
+    mpPulseRightSpeedSpin->setRange( 0, 10 );
+    mpPulseRightSpeedSpin->setSuffix( " speed" );
+    mpPulseRightSourceSpin->setValue( settings.value( SETTINGS_PULSE_RIGHT_SOURCE, 1 ).toUInt() );
+    mpPulseRightLengthSpin->setValue( settings.value( SETTINGS_PULSE_RIGHT_LENGTH, 40 ).toUInt() );
+    mpPulseRightWidthSpin->setValue( settings.value( SETTINGS_PULSE_RIGHT_WIDTH, 10 ).toUInt() );
+    mpPulseRightSpeedSpin->setValue( settings.value( SETTINGS_PULSE_RIGHT_SPEED, 5 ).toUInt() );
+    connect( mpPulseRightSourceSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseRight() ) );
+    connect( mpPulseRightLengthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseRight() ) );
+    connect( mpPulseRightWidthSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseRight() ) );
+    connect( mpPulseRightSpeedSpin, SIGNAL( valueChanged( int ) ), this, SLOT( HandlePulseRight() ) );
 
     // Layout
     QVBoxLayout* pMainLayout = new QVBoxLayout( this );
@@ -292,6 +391,8 @@ cLP2::cLP2( QWidget* pParent )
     pGridLayout->addWidget( mpBucketAvgSliders[3],  1, 4 );
     pGridLayout->addWidget( mpBucketAvgSliders[4],  1, 5 );
     pGridLayout->addWidget( mpBucketAvgSliders[5],  1, 6 );
+    pGridLayout->addWidget( mpThreshold,   2, 0 );
+    pGridLayout->addWidget( mpAveraging,   3, 0 );
     pGridLayout->addWidget( mpLo[0],       2, 1 );
     pGridLayout->addWidget( mpHi[0],       3, 1 );
     pGridLayout->addWidget( mpLo[1],       2, 2 );
@@ -305,11 +406,8 @@ cLP2::cLP2( QWidget* pParent )
     pGridLayout->addWidget( mpLo[5],       2, 6 );
     pGridLayout->addWidget( mpHi[5],       3, 6 );
     pGridLayout->addWidget( mpBuckets,     4, 1, 6, 6 );
-    pGridLayout->addWidget( mpThreshold,   4, 0 );
-    pGridLayout->addWidget( mpThreshold,   5, 0 );
-    pGridLayout->addWidget( mpAveraging,   6, 0 );
-    pGridLayout->addWidget( mpHysteresis,  7, 0 );
-    pGridLayout->addWidget( mpSeconds,     8, 0 );
+    pGridLayout->addWidget( mpHysteresis,  4, 0 );
+    pGridLayout->addWidget( mpSeconds,     5, 0 );
     pHBoxLayout = new QHBoxLayout();
     pHBoxLayout->addWidget( mpTimeFlags[0] );
     pHBoxLayout->addWidget( mpTimeFlags[1] );
@@ -317,7 +415,7 @@ cLP2::cLP2( QWidget* pParent )
     pHBoxLayout->addWidget( mpTimeFlags[3] );
     pHBoxLayout->addWidget( mpTimeFlags[4] );
     pHBoxLayout->addWidget( mpTimeFlags[5] );
-    pGridLayout->addLayout( pHBoxLayout,   9, 0 );
+    pGridLayout->addLayout( pHBoxLayout,   6, 0 );
     pMainLayout->addLayout( pGridLayout );
 
     pGridLayout = new QGridLayout();
@@ -336,12 +434,34 @@ cLP2::cLP2( QWidget* pParent )
     pGridLayout->addWidget( mpPulseSineSourceSpin, 3, 2 );
     pGridLayout->addWidget( mpPulseSineLengthSpin, 3, 3 );
     pGridLayout->addWidget( mpPulseSineWidthSpin, 3, 4 );
+    pGridLayout->addWidget( mpPulseSineSpeedSpin, 3, 5 );
     QLabel* pLabelDistanceSquare = new QLabel( "Distance Square:", this );
     pGridLayout->addWidget( pLabelDistanceSquare, 4, 1 );
     pGridLayout->addWidget( mpDistanceSquareSourceSpin, 4, 2 );
     pGridLayout->addWidget( mpDistanceSquareStartSpin, 4, 3 );
     pGridLayout->addWidget( mpDistanceSquareStopSpin, 4, 4 );
     pGridLayout->addWidget( mpDistanceSquareAmpSpin, 4, 5 );
+    QLabel* pLabelSwing = new QLabel( "Swing:", this );
+    pGridLayout->addWidget( pLabelSwing, 5, 1 );
+    pGridLayout->addWidget( mpSwingSourceSpin, 5, 2 );
+    pGridLayout->addWidget( mpSwingStartSpin, 5, 3 );
+    pGridLayout->addWidget( mpSwingStopSpin, 5, 4 );
+    pGridLayout->addWidget( mpSwingPeriodSpin, 5, 5 );
+    QLabel* pLabelPulseCenter = new QLabel( "Pulse Center:", this );
+    pGridLayout->addWidget( pLabelPulseCenter, 6, 1 );
+    pGridLayout->addWidget( mpPulseCenterSourceSpin, 6, 2 );
+    pGridLayout->addWidget( mpPulseCenterWidthSpin, 6, 3 );
+    pGridLayout->addWidget( mpPulseCenterSpeedSpin, 6, 4 );
+    QLabel* pLabelDropCycle = new QLabel( "Drop Cycle:", this );
+    pGridLayout->addWidget( pLabelDropCycle, 7, 1 );
+    pGridLayout->addWidget( mpDropCycleSourceSpin, 7, 2 );
+    pGridLayout->addWidget( mpDropCycleSpeedSpin, 7, 3 );
+    QLabel* pLabelPulseRight = new QLabel( "Pulse Right:", this );
+    pGridLayout->addWidget( pLabelPulseRight, 8, 1 );
+    pGridLayout->addWidget( mpPulseRightSourceSpin, 8, 2 );
+    pGridLayout->addWidget( mpPulseRightLengthSpin, 8, 3 );
+    pGridLayout->addWidget( mpPulseRightWidthSpin, 8, 4 );
+    pGridLayout->addWidget( mpPulseRightSpeedSpin, 8, 5 );
     pGridLayout->setColumnStretch( 1, 1 );
     pGridLayout->setColumnStretch( 2, 1 );
     pGridLayout->setColumnStretch( 3, 1 );
@@ -365,6 +485,18 @@ cLP2::cLP2( QWidget* pParent )
     connect( this, SIGNAL( NewMessage( QByteArray ) ), this, SLOT( HandleNewMessage( QByteArray ) ) );
 
     QThread::currentThread()->setPriority( QThread::HighPriority );
+
+    UpdateAudioParameters();
+    UpdateBucketParameters();
+
+    HandleManual();
+    HandlePulseSquare();
+    HandlePulseSine();
+    HandleDistanceSquare();
+    HandleSwing();
+    HandlePulseCenter();
+    HandleDropCycle();
+    HandlePulseRight();
 }
 
 cLP2::~cLP2()
@@ -389,6 +521,12 @@ void cLP2::Open( void )
     if( opened )
     {
         mFirstRead = true;
+        qint64 bytesRead = 0;
+        do
+        {
+            char buffer[READ_BUFFER_LENGTH];
+            bytesRead = mpSerial->read( buffer, READ_BUFFER_LENGTH );
+        } while( bytesRead > 0 );
     }
 }
 
@@ -407,33 +545,42 @@ void cLP2::Close( void )
 
 void cLP2::Read( void )
 {
-    if( mReadTimer.isValid() && ( mReadTimer.elapsed() > READ_TIMEOUT ) )
-    {
-        mDataRx.clear();
-        mReadTimer.invalidate();
-    }
-
     static char mReadBuffer[READ_BUFFER_LENGTH];
-    qint64 bytesRead = mpSerial->read( mReadBuffer, READ_BUFFER_LENGTH );
-    if( bytesRead >= 0 )
+    qint64 bytesRead = 0;
+    do
     {
-        mDataRx.append( mReadBuffer, bytesRead );
-        while( mDataRx.size() >= MESSAGE_LENGTH_RX )
+        bytesRead = mpSerial->read( mReadBuffer, READ_BUFFER_LENGTH );
+        if( bytesRead > 0 )
         {
-            QByteArray message = mDataRx.left( MESSAGE_LENGTH_RX );
-            mDataRx.remove( 0, MESSAGE_LENGTH_RX );
-            if( !mFirstRead )
+            mDataRx.append( mReadBuffer, bytesRead );
+            // Look for start of frame
+            bool foundSof = false;
+            for( qint32 i=0; i<mDataRx.size(); i++ )
             {
-                emit( NewMessage( message ) );
+                if( mDataRx.at(i) == (char)0xFF )
+                {
+                    foundSof = true;
+                    if( i > 0 )
+                    {
+                        mDataRx.remove( 0, i );
+                    }
+                    break;
+                }
+            }
+            if( foundSof )
+            {
+                while( mDataRx.size() >= MESSAGE_LENGTH_RX )
+                {
+                    QByteArray message = mDataRx.left( MESSAGE_LENGTH_RX );
+                    mDataRx.remove( 0, MESSAGE_LENGTH_RX );
+                    if( !mFirstRead )
+                    {
+                        emit( NewMessage( message ) );
+                    }
+                }
             }
         }
-    }
-
-    if( mDataRx.size() > 0 )
-    {
-        mReadTimer.start();
-    }
-
+    } while( bytesRead > 0 );
     mFirstRead = false;
 }
 
@@ -632,10 +779,12 @@ void cLP2::HandlePulseSine( void )
     char source = mpPulseSineSourceSpin->value();
     char length = mpPulseSineLengthSpin->value();
     char width = mpPulseSineWidthSpin->value();
+    char speed = mpPulseSineSpeedSpin->value();
     data.insert( 0, source );
     data.insert( 1, length );
     data.insert( 2, width );
-    PatternSetPulseSine( (quint8)source, (quint8)length, (quint8)width );
+    data.insert( 3, speed );
+    PatternSetPulseSine( (quint8)source, (quint8)length, (quint8)width, (quint8)speed );
 
     SendCommand( Command_PULSE_SINE, data );
 }
@@ -655,6 +804,71 @@ void cLP2::HandleDistanceSquare( void )
     PatternSetDistanceSquare( (quint8)source, (quint8)start, (quint8)stop, (quint8)amp );
 
     SendCommand( Command_DISTANCE_SQUARE, data );
+}
+
+void cLP2::HandleSwing( void )
+{
+    QByteArray data( MESSAGE_LENGTH-1, 0 );
+
+    char source = mpSwingSourceSpin->value();
+    char start = mpSwingStartSpin->value();
+    char stop = mpSwingStopSpin->value();
+    quint16 period = mpSwingPeriodSpin->value();
+    char periodHi = (char)( (quint8)( period >> 8 ) );
+    char periodLo = (char)( (quint8)period );
+    data.insert( 0, source );
+    data.insert( 1, start );
+    data.insert( 2, stop );
+    data.insert( 3, periodHi );
+    data.insert( 4, periodLo );
+    PatternSetSwing( (quint8)source, (quint8)start, (quint8)stop, (quint16)period );
+
+    SendCommand( Command_SWING, data );
+}
+
+void cLP2::HandlePulseCenter( void )
+{
+    QByteArray data( MESSAGE_LENGTH-1, 0 );
+
+    char source = mpPulseCenterSourceSpin->value();
+    char width = mpPulseCenterWidthSpin->value();
+    char speed = mpPulseCenterSpeedSpin->value();
+    data.insert( 0, source );
+    data.insert( 1, width );
+    data.insert( 2, speed );
+    PatternSetPulseCenter( (quint8)source, (quint8)width, (quint8)speed );
+
+    SendCommand( Command_PULSE_CENTER, data );
+}
+
+void cLP2::HandleDropCycle( void )
+{
+    QByteArray data( MESSAGE_LENGTH-1, 0 );
+
+    char source = mpDropCycleSourceSpin->value();
+    char speed = mpDropCycleSpeedSpin->value();
+    data.insert( 0, source );
+    data.insert( 1, speed );
+    PatternSetDropCycle( (quint8)source, (quint8)speed );
+
+    SendCommand( Command_DROP_CYCLE, data );
+}
+
+void cLP2::HandlePulseRight( void )
+{
+    QByteArray data( MESSAGE_LENGTH-1, 0 );
+
+    char source = mpPulseRightSourceSpin->value();
+    char length = mpPulseRightLengthSpin->value();
+    char width = mpPulseRightWidthSpin->value();
+    char speed = mpPulseRightSpeedSpin->value();
+    data.insert( 0, source );
+    data.insert( 1, length );
+    data.insert( 2, width );
+    data.insert( 3, speed );
+    PatternSetPulseRight( (quint8)source, (quint8)length, (quint8)width, (quint8)speed );
+
+    SendCommand( Command_PULSE_RIGHT, data );
 }
 
 void cLP2::Save( void )
@@ -678,11 +892,17 @@ void cLP2::Save( void )
         settings.setValue( SETTINGS_TIME_FLAG + QString::number(i), mpTimeFlags[i]->isChecked() );
     }
 
+    for( qint32 i=0; i<Effect_MAX; i++ )
+    {
+        settings.setValue( SETTINGS_EFFECT + QString::number(i), false );
+    }
     foreach( QListWidgetItem* pItem, mpEffects->selectedItems() )
     {
         quint32 effect = pItem->data( Qt::UserRole ).toUInt();
         settings.setValue( SETTINGS_EFFECT + QString::number(effect), pItem->isSelected() );
     }
+
+    settings.setValue( SETTINGS_MANUAL_VALUE, mpManualValueSlider->value() );
 
     settings.setValue( SETTINGS_PULSE_SQUARE_SOURCE, mpPulseSquareSourceSpin->value() );
     settings.setValue( SETTINGS_PULSE_SQUARE_LENGTH, mpPulseSquareLengthSpin->value() );
@@ -691,11 +911,29 @@ void cLP2::Save( void )
     settings.setValue( SETTINGS_PULSE_SINE_SOURCE, mpPulseSineSourceSpin->value() );
     settings.setValue( SETTINGS_PULSE_SINE_LENGTH, mpPulseSineLengthSpin->value() );
     settings.setValue( SETTINGS_PULSE_SINE_WIDTH, mpPulseSineWidthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_SINE_SPEED, mpPulseSineSpeedSpin->value() );
 
     settings.setValue( SETTINGS_DISTANCE_SQUARE_SOURCE, mpDistanceSquareSourceSpin->value() );
     settings.setValue( SETTINGS_DISTANCE_SQUARE_START, mpDistanceSquareStartSpin->value() );
     settings.setValue( SETTINGS_DISTANCE_SQUARE_STOP, mpDistanceSquareStopSpin->value() );
     settings.setValue( SETTINGS_DISTANCE_SQUARE_AMP, mpDistanceSquareAmpSpin->value() );
+
+    settings.setValue( SETTINGS_SWING_SOURCE, mpSwingSourceSpin->value() );
+    settings.setValue( SETTINGS_SWING_START, mpSwingStartSpin->value() );
+    settings.setValue( SETTINGS_SWING_STOP, mpSwingStopSpin->value() );
+    settings.setValue( SETTINGS_SWING_PERIOD, mpSwingPeriodSpin->value() );
+
+    settings.setValue( SETTINGS_PULSE_CENTER_SOURCE, mpPulseCenterSourceSpin->value() );
+    settings.setValue( SETTINGS_PULSE_CENTER_WIDTH, mpPulseCenterWidthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_CENTER_SPEED, mpPulseCenterSpeedSpin->value() );
+
+    settings.setValue( SETTINGS_DROP_CYCLE_SOURCE, mpDropCycleSourceSpin->value() );
+    settings.setValue( SETTINGS_DROP_CYCLE_SPEED, mpDropCycleSpeedSpin->value() );
+
+    settings.setValue( SETTINGS_PULSE_RIGHT_SOURCE, mpPulseRightSourceSpin->value() );
+    settings.setValue( SETTINGS_PULSE_RIGHT_LENGTH, mpPulseRightLengthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_RIGHT_WIDTH, mpPulseRightWidthSpin->value() );
+    settings.setValue( SETTINGS_PULSE_RIGHT_SPEED, mpPulseRightSpeedSpin->value() );
 }
 
 void cLP2::Load( void )
@@ -733,6 +971,10 @@ QString cLP2::GetEffectName( eEffect effect )
     case Effect_PULSE_SQUARE:    name = "PULSE_SQUARE";     break;
     case Effect_PULSE_SINE:      name = "PULSE_SINE";       break;
     case Effect_DISTANCE_SQUARE: name = "DISTANCE_SQUARE";  break;
+    case Effect_SWING:           name = "SWING";            break;
+    case Effect_PULSE_CENTER:    name = "PULSE_CENTER";     break;
+    case Effect_DROP_CYCLE:      name = "DROP_CYCLE";       break;
+    case Effect_PULSE_RIGHT:     name = "PULSE_RIGHT";      break;
     default:                                                break;
     }
     return name;

@@ -30,8 +30,18 @@
 
 void DebugInit( void )
 {
+    // Interrupt debug pin
     DDRC = DDRC | 0x08;
     PORTC = PORTC & ~0x08;
+
+    // Debug pin 0
+    DDRC = DDRC | 0x04;
+    PORTC = PORTC & ~0x04;
+
+    // Debug pin 1
+    DDRD = DDRD | 0x08;
+    PORTD = PORTD & ~0x08;
+
 }
 
 void DebugUp( void )
@@ -42,6 +52,30 @@ void DebugUp( void )
 void DebugDown( void )
 {
     PORTC = PORTC & ~0x08;
+}
+
+void DebugSet0( unsigned char value )
+{
+    if( value )
+    {
+        PORTC = PORTC | 0x04;
+    }
+    else
+    {
+        PORTC = PORTC & ~0x04;
+    }
+}
+
+void DebugSet1( unsigned char value )
+{
+    if( value )
+    {
+        PORTD = PORTD | 0x08;
+    }
+    else
+    {
+        PORTD = PORTD & ~0x08;
+    }
 }
 
 void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n )

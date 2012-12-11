@@ -28,7 +28,7 @@
 namespace
 {
     // Use a buffer large enough to receive any full message
-    const int BUFFER_SIZE = 1032;
+    const int BUFFER_SIZE = 4096;
 
     int ModeFlags( QIODevice::OpenMode mode )
     {

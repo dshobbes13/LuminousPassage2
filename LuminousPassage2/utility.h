@@ -33,6 +33,10 @@ void DebugUp( void );
 
 void DebugDown( void );
 
+void DebugSet0( unsigned char value );
+
+void DebugSet1( unsigned char value );
+
 void Magnitude( unsigned char* mag, char* real, char* imag, unsigned char n );
 
 char* HexString( unsigned char hex );

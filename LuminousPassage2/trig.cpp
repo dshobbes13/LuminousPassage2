@@ -75,26 +75,26 @@ const unsigned char SINEWAVE[256] = {
 
 #ifndef SOFTWARE
 
-unsigned char Sin( unsigned char index )
+char Sin( unsigned char index )
 {
-    return pgm_read_byte_near( SINEWAVE + index );
+    return (char)( pgm_read_byte_near( SINEWAVE + index ) );
 }
 
-unsigned char Cos( unsigned char index )
+char Cos( unsigned char index )
 {
-    return pgm_read_byte_near( SINEWAVE + index + 64 );
+    return (char)( pgm_read_byte_near( SINEWAVE + index + 64 ) );
 }
 
 #else
 
-unsigned char Sin( unsigned char index )
+char Sin( unsigned char index )
 {
-    return SINEWAVE[index];
+    return (char)( SINEWAVE[index] );
 }
 
-unsigned char Cos( unsigned char index )
+char Cos( unsigned char index )
 {
-    return SINEWAVE[index+64];
+    return (char)( SINEWAVE[index+64] );
 }
 
 #endif

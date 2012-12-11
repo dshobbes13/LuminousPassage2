@@ -17,8 +17,8 @@
 // PUBLIC FUNCTIONS
 //*****************
 
-unsigned char Sin( unsigned char index );
+char Sin( unsigned char index );
 
-unsigned char Cos( unsigned char index );
+char Cos( unsigned char index );
 
 #endif

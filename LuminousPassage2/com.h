@@ -22,8 +22,12 @@ enum eCommand
     Command_BUCKETS         = 5,    // { Byte1 = Hysteresis, Byte2 = SecondsFlags, Byte3 = Seconds }
     Command_MANUAL          = 6,    // { Byte1 = Value }
     Command_PULSE_SQUARE    = 7,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
-    Command_PULSE_SINE      = 8,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width }
+    Command_PULSE_SINE      = 8,    // { Byte1 = Source, Byte2 = Length, Byte3 = Width, Byte4 = Speed }
     Command_DISTANCE_SQUARE = 9,    // { Byte1 = Source, Byte2 = Start, Byte3 = Stop, Byte4 = Amp }
+    Command_SWING           = 10,   // { Byte1 = Source, Byte2 = Start, Byte3 = Stop, Byte4 = PeriodHi, Byte5 = PeriodLo }
+    Command_PULSE_CENTER    = 11,   // { Byte1 = Source, Byte2 = Width, Byte3 = Speed }
+    Command_DROP_CYCLE      = 12,   // { Byte1 = Source, Byte2 = Speed }
+    Command_PULSE_RIGHT     = 13,   // { Byte1 = Source, Byte2 = Length, Byte3 = Width, Byte4 = Speed }
 };
 
 #define MESSAGE_LENGTH  16

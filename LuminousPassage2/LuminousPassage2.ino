@@ -16,14 +16,13 @@
 #include "global.h"
 #include "pattern.h"
 #include "pwm.h"
-#include "testFft.h"
 #include "utility.h"
 
 //*****************
 // DEFINITIONS
 //*****************
 
-//#define DEBUG
+#define DEBUG
 
 
 //*****************
@@ -48,6 +47,11 @@ static unsigned long mFftCount = 0;
 static unsigned char mNewFft = 0;
 static unsigned char mUpdatePwm = 0;
 
+static unsigned char mDebug0Count = 0;
+static unsigned char mDebug0State = 0;
+
+static unsigned char mDebug1Count = 0;
+static unsigned char mDebug1State = 0;
 
 //*****************
 // SETUP
@@ -69,9 +73,9 @@ void setup( void )
     ComMasterInit();
 #endif
 
-//#if !defined( MASTER )
+#if !defined( MASTER )
     PwmInit();
-//#endif
+#endif
 
 #if !defined( MASTER_SINGLE ) && !defined( MASTER )
     ComSlaveInit();
@@ -80,10 +84,12 @@ void setup( void )
     //TestFft();
     //while(1);
 
-#ifdef DEBUG
     DebugInit();
-#endif
 
+#if defined( MASTER_SINGLE ) || defined( MASTER )
+    PatternLoad();
+    AudioLoad();
+#endif
 }
 
 //*****************
@@ -202,7 +208,8 @@ void loop( void )
                 quint8 source = ComGetByte( 0 );
                 quint8 length = ComGetByte( 1 );
                 quint8 width = ComGetByte( 2 );
-                PatternSetPulseSine( source, length, width );
+                quint8 speed = ComGetByte( 3 );
+                PatternSetPulseSine( source, length, width, speed );
             }
             break;
         case Command_DISTANCE_SQUARE:
@@ -212,6 +219,42 @@ void loop( void )
                 quint8 stop = ComGetByte( 2 );
                 quint8 amp = ComGetByte( 3 );
                 PatternSetDistanceSquare( source, start, stop, amp );
+            }
+            break;
+        case Command_SWING:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 start = ComGetByte( 1 );
+                quint8 stop = ComGetByte( 2 );
+                quint8 periodHi = ComGetByte( 3 );
+                quint8 periodLo = ComGetByte( 4 );
+                quint16 period = ( (quint16)periodHi ) << 8;
+                period += periodLo;
+                PatternSetSwing( source, start, stop, period );
+            }
+            break;
+        case Command_PULSE_CENTER:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 width = ComGetByte( 1 );
+                quint8 speed = ComGetByte( 2 );
+                PatternSetPulseCenter( source, width, speed );
+            }
+            break;
+        case Command_DROP_CYCLE:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 speed = ComGetByte( 1 );
+                PatternSetDropCycle( source, speed );
+            }
+            break;
+        case Command_PULSE_RIGHT:
+            {
+                quint8 source = ComGetByte( 0 );
+                quint8 length = ComGetByte( 1 );
+                quint8 width = ComGetByte( 2 );
+                quint8 speed = ComGetByte( 3 );
+                PatternSetPulseRight( source, length, width, speed );
             }
             break;
         default:
@@ -239,6 +282,7 @@ void loop( void )
             PatternUpdateAd( mAdMean, mAdPeak );
             PatternUpdateBuckets( AudioBuckets(), AudioBucketAverages() );
 
+            mFftSum[0] = 0xFF;
             ComSendFft( mFftSum );
 
             for( unsigned char i=0; i<GLOBAL_NUM_FREQ; i ++ )
@@ -262,29 +306,47 @@ void loop( void )
     ComSlaveProcess();
     if( ComSlaveReady() )
     {
+#ifdef DEBUG
+    DebugUp();
+#endif
         ComSlaveData( mPwmValues );
         mUpdatePwm = 1;
+#ifdef DEBUG
+    DebugDown();
+#endif
     }
 
 #endif
 
-#if !defined( MASTER )
+#if defined( MASTER )
 
     if( mUpdatePwm )
     {
         mUpdatePwm = 0;
         PwmSetChannels( mPwmValues );
+        if( ++mDebug0Count >= 100 )
+        {
+            mDebug0Count = 0;
+            DebugSet0( mDebug0State );
+            mDebug0State = ~mDebug0State;
+        }
+        ComMasterSendBytes( mPwmValues );
     }
-    PwmProcess();
 
 #else
 
     if( mUpdatePwm )
     {
         mUpdatePwm = 0;
+        if( ++mDebug0Count >= 100 )
+        {
+            mDebug0Count = 0;
+            DebugSet0( mDebug0State );
+            mDebug0State = ~mDebug0State;
+        }
         PwmSetChannels( mPwmValues );
-        ComMasterSendBytes( mPwmValues );
     }
+    PwmProcess();
 
 #endif
 

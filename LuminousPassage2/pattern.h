@@ -33,7 +33,11 @@ enum eEffect
     Effect_PULSE_SQUARE     = 6,
     Effect_PULSE_SINE       = 7,
     Effect_DISTANCE_SQUARE  = 8,
-    Effect_MAX              = 9,
+    Effect_SWING            = 9,
+    Effect_PULSE_CENTER     = 10,
+    Effect_DROP_CYCLE       = 11,
+    Effect_PULSE_RIGHT      = 12,
+    Effect_MAX              = 13,
 };
 
 
@@ -55,9 +59,17 @@ void PatternSetManual( quint8 value );
 
 void PatternSetPulseSquare( quint8 source, quint8 length, quint8 width );
 
-void PatternSetPulseSine( quint8 source, quint8 length, quint8 width );
+void PatternSetPulseSine( quint8 source, quint8 length, quint8 width, quint8 speed );
 
 void PatternSetDistanceSquare( quint8 source, quint8 start, quint8 stop, quint8 amp );
+
+void PatternSetSwing( quint8 source, quint8 start, quint8 stop, quint16 period );
+
+void PatternSetPulseCenter( quint8 source, quint8 width, quint8 speed );
+
+void PatternSetDropCycle( quint8 source, quint8 speed );
+
+void PatternSetPulseRight( quint8 source, quint8 length, quint8 width, quint8 speed );
 
 quint8 PatternReady( void );
 

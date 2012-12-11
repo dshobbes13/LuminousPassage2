@@ -70,6 +70,10 @@ private slots:
     void HandlePulseSquare( void );
     void HandlePulseSine( void );
     void HandleDistanceSquare( void );
+    void HandleSwing( void );
+    void HandlePulseCenter( void );
+    void HandleDropCycle( void );
+    void HandlePulseRight( void );
 
     void Save( void );
     void Load( void );
@@ -110,16 +114,29 @@ private:
     QSpinBox* mpPulseSineSourceSpin;
     QSpinBox* mpPulseSineLengthSpin;
     QSpinBox* mpPulseSineWidthSpin;
+    QSpinBox* mpPulseSineSpeedSpin;
     QSpinBox* mpDistanceSquareSourceSpin;
     QSpinBox* mpDistanceSquareStartSpin;
     QSpinBox* mpDistanceSquareStopSpin;
     QSpinBox* mpDistanceSquareAmpSpin;
+    QSpinBox* mpSwingSourceSpin;
+    QSpinBox* mpSwingStartSpin;
+    QSpinBox* mpSwingStopSpin;
+    QSpinBox* mpSwingPeriodSpin;
+    QSpinBox* mpPulseCenterSourceSpin;
+    QSpinBox* mpPulseCenterWidthSpin;
+    QSpinBox* mpPulseCenterSpeedSpin;
+    QSpinBox* mpDropCycleSourceSpin;
+    QSpinBox* mpDropCycleSpeedSpin;
+    QSpinBox* mpPulseRightSourceSpin;
+    QSpinBox* mpPulseRightLengthSpin;
+    QSpinBox* mpPulseRightWidthSpin;
+    QSpinBox* mpPulseRightSpeedSpin;
 
     cPatternThread* mpPatternThread;
     cSerialDevice* mpSerial;
 
     QByteArray mDataRx;
-    QElapsedTimer mReadTimer;
     bool mFirstRead;
 
     qint32 mCountMessages;
